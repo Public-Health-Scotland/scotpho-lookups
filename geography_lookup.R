@@ -13,9 +13,17 @@
 ###############################################.
 lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
 
-geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-cl_out_geo <- "/conf/linkage/output/lookups/geography/"
-cl_out_depr <- "/conf/linkage/output/lookups/Unicode/Deprivation/"
+server_desktop <- "desktop" #change depending on what R are you using
+if (server_desktop == "server") {
+  geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
+  cl_out_geo <- "/conf/linkage/output/lookups/geography/"
+  cl_out_depr <- "/conf/linkage/output/lookups/Unicode/Deprivation/"
+  
+} else if (server_desktop == "desktop") {
+  geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
+  cl_out_geo <- "//stats/linkage/output/lookups/geography/"
+  cl_out_depr <- "//stats/linkage/output/lookups/Unicode/Deprivation/"
+}
   
 ###############################################.
 ## Functions ----

@@ -13,8 +13,18 @@ library(dplyr)
 library(foreign) 
 library(reshape2)
 
-pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
-cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/"
+server_desktop <- "desktop" #change depending on what R are you using
+if (server_desktop == "server") {
+  pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
+  geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
+  cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/"
+  
+} else if (server_desktop == "desktop") {
+  pop_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Population/"
+  geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
+  cl_out_pop <- "//stats/linkage/output/lookups/Unicode/Populations/Estimates/"
+}
+
 ###############################################.
 ## Part 1 - Functions ----
 ###############################################.

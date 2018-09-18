@@ -3,8 +3,8 @@
 
 # Part 1 - Functions.
 # Part 2 - Basefiles based on DZ01 and DZ11
-# Part 3 - Create population files 
-# Part 4 - Smoking population
+# Part 3 - Basefiles by deprivation quintile
+# Part 4 - Create population files 
 
 ###############################################.
 ## Packages/Filepaths ----
@@ -13,7 +13,7 @@ library(dplyr)
 library(foreign) 
 library(reshape2)
 
-server_desktop <- "desktop" #change depending on what R are you using
+server_desktop <- "server" #change depending on what R are you using
 if (server_desktop == "server") {
   pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
@@ -40,28 +40,31 @@ create_agegroups <- function(df) {
     TRUE ~ as.numeric(age)
   ))
 }
-
+###############################################.
 # This functions takes a basefile (DZ01 or DZ11), selects the age of interest and
 # produces files for % and crude rates and for standard rates. It also allows you
 # to create files only with council and higher geographies.
 # Lower and upper are the age limits, name is the name of the output file,
 # dx is what datazone you are using, council if you want council files and
 # stdrate if you want pops used  for standarized rates
-create_pop <- function(lower, upper, name, dz, council = F, stdrate = F) {
+create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
+                       deprivation = F) {
   #Reading file, aggregating and saving file for % and crude rates
+  if (deprivation == FALSE) {
+    
   data_dz <- readRDS(file=paste0(pop_lookup, "basefile_", dz, ".rds")) %>% 
     subset(age >= lower & age <= upper) %>% #selecting age of interest
     group_by(year, code) %>% summarise(denominator=sum(denominator)) %>% ungroup()
  
   saveRDS(data_dz, file=paste0(pop_lookup, dz, '_', name,'.rds'))
 
-  if (council==TRUE) { # select only local authorites and above.
+  if (council == TRUE) { # select only local authorites and above.
     data_ca <- data_dz %>% subset(!(substr(code,1,3) %in% c('S02', 'S99', 'S37')))
 
     saveRDS(data_ca, file=paste0(pop_lookup, 'CA_', name,'.rds'))
   }
 
-  if (stdrate==TRUE) { # creating files for standard rates
+  if (stdrate == TRUE) { # creating files for standard rates
     data_dz_sr <- readRDS(file=paste0(pop_lookup, "basefile_", dz, ".rds")) %>% 
       subset(age >= lower & age <= upper) %>% #selecting age of interest
       group_by(year, code, sex_grp, age_grp) %>% #aggregating
@@ -69,14 +72,37 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F) {
     
     saveRDS(data_dz_sr, file=paste0(pop_lookup, dz, '_', name,'_SR.rds'))
 
-    if (council==TRUE) { # select only local authorites and above. 
+    if (council == TRUE) { # select only local authorites and above. 
       data_ca_sr <- data_dz_sr %>% subset(!(substr(code,1,3) %in% c('S02', 'S99', 'S37')))
       
       saveRDS(data_ca_sr, file=paste0(pop_lookup, 'CA_', name,'_SR.rds'))
+      }
+    }
+  }
+  #For deprivation cases
+  if (deprivation == TRUE) {
+    
+    data_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
+      subset(age >= lower & age <= upper) %>% #selecting age of interest
+      group_by(year, code, quintile) %>% 
+      summarise(denominator=sum(denominator)) %>% ungroup()
+    
+    saveRDS(data_depr, file=paste0(pop_lookup, 'depr_pop_', name,'.rds'))
+    
+    if (stdrate == TRUE) {
+      
+      data_depr_sr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
+        subset(age >= lower & age <= upper) %>% #selecting age of interest
+        group_by(year, code, sex_grp, age_grp, quintile) %>% 
+        summarise(denominator=sum(denominator)) %>% ungroup()
+      
+      saveRDS(data_depr_sr, file=paste0(pop_lookup, 'depr_pop_', name,'_SR.rds'))
+      
     }
   }
 }
 
+###############################################.
 #For ADP's we have a slightly different function
 create_adp_pop <- function(lower, upper, name, stdrate = F) {
   
@@ -235,7 +261,50 @@ all_pop11 <- rbind(iz11, ca, hb, hscp, scotland, locality) %>%
 saveRDS(all_pop11, file=paste0(pop_lookup, "basefile_DZ11.rds"))
 
 ###############################################.
-## Part 3 - Create population files  ----
+## Part 3 - Population by deprivation quintile basefile ----
+###############################################.
+#This is better to be run in R server.
+
+dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds")) %>% 
+  filter(year<2014) %>% # 2014 uses simd2016 based on dz2011
+  rename(datazone = datazone2001)
+
+dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds")) %>% 
+  subset(year>2013) %>% # 2014 onwards uses simd based on dz2011
+  rename(datazone = datazone2011)
+
+depr_pop_base <- rbind(dz01_base, dz11_base)
+rm(dz01_base, dz11_base)
+
+depr_lookup <- readRDS(paste0(geo_lookup, 'deprivation_geography.rds')) %>% 
+  mutate(scotland="S00000001")
+
+depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"))
+
+scot_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, scotland, sc_quin) %>% 
+  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
+  rename(quintile = sc_quin, code = scotland)
+
+hb_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, hb2014, hb_quin) %>% 
+  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
+  rename(quintile = hb_quin, code = hb2014)
+
+ca_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, ca2011, ca_quin) %>% 
+  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
+  rename(quintile = ca_quin, code = ca2011)
+
+depr_pop_base <- rbind(scot_depr_pop, hb_depr_pop, ca_depr_pop)
+
+depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code) %>% 
+  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
+  mutate(quintile = "Total")
+
+depr_pop_base <- rbind(depr_pop_base, depr_totals)
+
+saveRDS(depr_pop_base, paste0(pop_lookup, "basefile_deprivation.rds"))
+
+###############################################.
+## Part 4 - Create population files  ----
 ###############################################.
 # DZ11 and LA
 create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages",  council = T, stdrate = T)
@@ -304,49 +373,5 @@ saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'DZ11_pop_fem15to19.rds'))
 teenpreg_pop <- teenpreg_pop %>% subset(!(substr(code,1,3) %in% c('S02', 'S99', 'S37')))
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'CA_pop_fem15to19.rds'))
 
-###############################################.
-## Part 4 - Smoking population ----
-###############################################.
-# Bringing smoking population from SHOS before 2012. We count with SSCQ data from
-# then onwards. This file cannot be recreated as original prevalence might be lost.
-smok_old <- read.spss(paste0(pop_lookup, "smoking_pop.sav"),
-                to.data.frame=TRUE, use.value.labels=FALSE) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  subset(year<2012)
-
-# SSCQ prevalence file
-smok_new <- read.csv(paste0(pop_lookup, "smoking_pop_SSCQ.csv")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  rename(denominator = total_pop) %>% 
-  mutate(code =
-           recode(area, "Aberdeen City"= "S12000033", "Angus"= "S12000041",
-                  "Aberdeenshire"= "S12000034", "Argyll & Bute"= "S12000035",
-                  "Clackmannanshire"= "S12000005","Dumfries & Galloway"= "S12000006",
-                  "Dundee City"= "S12000042","East Ayrshire"= "S12000008", 
-                  "East Dunbartonshire"= "S12000045","East Renfrewshire"= "S12000011",
-                  "East Lothian"= "S12000010","Edinburgh, City of"= "S12000036",
-                  "Falkirk"= "S12000014","Fife_LA"= "S12000015","Glasgow City"= "S12000046",
-                  "Highland_LA"= "S12000017", "Inverclyde"= "S12000018","Moray"= "S12000020",
-                  "North Ayrshire"= "S12000021","North Lanarkshire"= "S12000044",
-                  "Orkney Islands"= "S12000023","Perth & Kinross"= "S12000024",
-                  "Renfrewshire"= "S12000038", "Scottish Borders"= "S12000026",
-                  "Shetland Islands"= "S12000027","South Ayrshire"= "S12000028",
-                  "South Lanarkshire"= "S12000029","Stirling"= "S12000030",
-                  "West Dunbartonshire"= "S12000039","West Lothian"= "S12000040",
-                  "Midlothian"= "S12000019","Eilean Siar"= "S12000013","Ayrshire & Arran"= "S08000015",
-                  "Borders"= "S08000016","Dumfries and Galloway"= "S08000017",
-                  "Fife"= "S08000018","Forth Valley"= "S08000019","Grampian"= "S08000020",
-                  "Greater Glasgow & Clyde"= "S08000021","Highland"= "S08000022",
-                  "Lanarkshire"= "S08000023","Lothian"= "S08000024","Orkney"= "S08000025",
-                  "Shetland"= "S08000026","Tayside"= "S08000027","Western Isles"= "S08000028")) %>% 
-  select(-rate, -area)
-
-#Creating population for Scotland
-smok_scot <- smok_new %>% group_by(year) %>% summarize(denominator = sum(denominator)) %>% 
-  mutate(code = "S00000001")
-
-smok_pop <- rbind(smok_old, smok_scot, smok_new) #joining together
-
-saveRDS(smok_pop, file=paste0(pop_lookup, 'smoking_pop_06to15.rds'))
 
 ##END

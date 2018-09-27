@@ -362,8 +362,19 @@ working_pop <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) %>%
 
 saveRDS(working_pop, file=paste0(pop_lookup, 'DZ11_working_pop.rds'))
 
+# For CA
 working_pop <- working_pop %>% subset(!(substr(code,1,3) %in% c('S02', 'S99', 'S37')))
 saveRDS(working_pop, file=paste0(pop_lookup, 'CA_working_pop.rds'))
+
+#For deprivation cases
+working_pop_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
+  subset(age > 15 & age < 65 & sex_grp ==1 | #selecting age of interest
+           sex_grp==2 & age>15 & age<65 & year>2009 | 
+           sex_grp==2 & age>15 & age<60 & year<2010) %>% 
+  group_by(year, code, quintile) %>% 
+  summarise(denominator=sum(denominator)) %>% ungroup()
+
+saveRDS(working_pop_depr, file=paste0(pop_lookup, 'depr_working_pop.rds'))
 
 ###############################################.
 # Teenage pregnancy  

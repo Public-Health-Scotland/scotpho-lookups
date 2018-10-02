@@ -84,7 +84,7 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
     
     data_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
       subset(age >= lower & age <= upper) %>% #selecting age of interest
-      group_by(year, code, quintile) %>% 
+      group_by(year, code, quintile, quint_type) %>% 
       summarise(denominator=sum(denominator)) %>% ungroup()
     
     saveRDS(data_depr, file=paste0(pop_lookup, 'depr_', name,'.rds'))
@@ -93,7 +93,7 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
       
       data_depr_sr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
         subset(age >= lower & age <= upper) %>% #selecting age of interest
-        group_by(year, code, sex_grp, age_grp, quintile) %>% 
+        group_by(year, code, sex_grp, age_grp, quintile, quint_type) %>% 
         summarise(denominator=sum(denominator)) %>% ungroup()
       
       saveRDS(data_depr_sr, file=paste0(pop_lookup, 'depr_', name,'_SR.rds'))
@@ -281,21 +281,30 @@ depr_lookup <- readRDS(paste0(geo_lookup, 'deprivation_geography.rds')) %>%
 
 depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"))
 
-scot_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, scotland, sc_quin) %>% 
-  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
-  rename(quintile = sc_quin, code = scotland)
 
-hb_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, hb2014, hb_quin) %>% 
-  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
-  rename(quintile = hb_quin, code = hb2014)
 
-ca_depr_pop <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, ca2011, ca_quin) %>% 
-  summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
-  rename(quintile = ca_quin, code = ca2011)
+#This function groups the data for the variables selected and then aggregates it
+#It works for the different types of quintiles and for all measures
+create_quintile_data <- function(group_vars, geo, quint) {
 
-depr_pop_base <- rbind(scot_depr_pop, hb_depr_pop, ca_depr_pop)
+  depr_pop_base %>% group_by_at(c("age_grp", "sex_grp", "age", "year", geo, quint)) %>% 
+      summarise(denominator = sum(denominator, na.rm =T)) %>% 
+      rename_(code = geo, quintile = quint) %>% ungroup() %>% 
+      mutate(quint_type = quint)
+}
 
-depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code) %>% 
+depr_pop_base <- rbind( 
+  create_quintile_data(geo = "scotland", quint = "sc_quin"),   #Scotland 
+  #Health boards using national quintiles
+  create_quintile_data(geo = "hb2014", quint = "sc_quin"),
+  #Health boards using health board quintiles
+  create_quintile_data(geo = "hb2014", quint = "hb_quin"),
+  #Council area using national quintiles
+  create_quintile_data(geo = "ca2011", quint = "sc_quin"),
+  #Council area using concil quintiles
+  create_quintile_data(geo = "ca2011", quint = "ca_quin"))
+
+depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, quint_type) %>% 
   summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
   mutate(quintile = "Total")
 
@@ -371,7 +380,7 @@ working_pop_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds"))
   subset(age > 15 & age < 65 & sex_grp ==1 | #selecting age of interest
            sex_grp==2 & age>15 & age<65 & year>2009 | 
            sex_grp==2 & age>15 & age<60 & year<2010) %>% 
-  group_by(year, code, quintile) %>% 
+  group_by(year, code, quintile, quint_type) %>% 
   summarise(denominator=sum(denominator)) %>% ungroup()
 
 saveRDS(working_pop_depr, file=paste0(pop_lookup, 'depr_working_pop.rds'))

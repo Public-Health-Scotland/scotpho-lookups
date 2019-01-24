@@ -50,8 +50,6 @@ create_agegroups <- function(df) {
 create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
                        deprivation = F) {
   #Reading file, aggregating and saving file for % and crude rates
-  if (deprivation == FALSE) {
-    
   data_dz <- readRDS(file=paste0(pop_lookup, "basefile_", dz, ".rds")) %>% 
     subset(age >= lower & age <= upper) %>% #selecting age of interest
     group_by(year, code) %>% summarise(denominator=sum(denominator)) %>% ungroup()
@@ -78,7 +76,6 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
       saveRDS(data_ca_sr, file=paste0(pop_lookup, 'CA_', name,'_SR.rds'))
       }
     }
-  }
   #For deprivation cases
   if (deprivation == TRUE) {
     
@@ -280,8 +277,6 @@ depr_lookup <- readRDS(paste0(geo_lookup, 'deprivation_geography.rds')) %>%
   mutate(scotland="S00000001")
 
 depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"))
-
-
 
 #This function groups the data for the variables selected and then aggregates it
 #It works for the different types of quintiles and for all measures

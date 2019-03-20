@@ -392,5 +392,12 @@ saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'DZ11_pop_fem15to19.rds'))
 teenpreg_pop <- teenpreg_pop %>% subset(!(substr(code,1,3) %in% c('S02', 'S99', 'S37')))
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'CA_pop_fem15to19.rds'))
 
+#For deprivation cases
+teenpreg_pop_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
+  subset(age > 14 & age < 20 & sex_grp ==2) %>%  #selecting age of interest
+  group_by(year, code, quintile, quint_type) %>% 
+  summarise(denominator=sum(denominator)) %>% ungroup()
+
+saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 
 ##END

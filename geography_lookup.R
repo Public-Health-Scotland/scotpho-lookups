@@ -13,7 +13,7 @@
 ###############################################.
 lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
 
-server_desktop <- "desktop" #change depending on what R are you using
+server_desktop <- "server" #change depending on what R are you using
 if (server_desktop == "server") {
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
   cl_out_geo <- "/conf/linkage/output/lookups/geography/"

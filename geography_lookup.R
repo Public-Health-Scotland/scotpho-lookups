@@ -72,7 +72,7 @@ hscp_loc <- read.spss(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.s
           to.data.frame=TRUE, use.value.labels=FALSE) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   rename(datazone2011 = datazone) %>% 
-  select(datazone2011, locality, partnership) %>% arrange(partnership, locality) 
+  select(datazone2011, locality, partnership) %>% arrange(locality, partnership) 
 
 ##Create artificial standard 9 digit code to identify unique localityfor use 
 #in matching files to generate indicator data.
@@ -81,9 +81,10 @@ hscp_loc <- read.spss(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.s
 ##Beware some localities might have common names to those used by other HSCPs 
 #(e.g. 'East'/'West' are commonly used as locality names by more than one partnership ).
 loc_seq <- seq_len(length(unique(hscp_loc$locality)))
-loc_zeros <- ifelse(nchar(loc_seq) == 1, "00000",
-                    ifelse(nchar(loc_seq) == 2, "0000",
-                           ifelse(nchar(loc_seq) == 3, "000", "ERROR")))
+loc_zeros <- case_when(nchar(loc_seq) == 1 ~ "00000",
+                       nchar(loc_seq) == 2 ~ "0000",
+                       nchar(loc_seq) == 3 ~ "000")
+
 loc_code <- paste0("S99", loc_zeros, loc_seq)
 
 loc_code <- data.frame(hscp_locality = loc_code, locality = unique(hscp_loc$locality))

@@ -5,21 +5,23 @@
 ##The source of the locality lookup was Ana Rodriguez from ISD LIST team.
 
 #Part 1 - HSC locality lookup.
-#Part 2 - Parent geography for IZ and locality
-#Part 3 - Create dictionary  to have the names and not codes.
-#Part 4 -Deprivation (SIMD) geographies
+#Part 2 - ADP lookup
+#Part 3 - Joining all geographies 
+#Part 4 - Parent geography for IZ and locality
+#Part 5 - Create dictionary  to have the names and not codes.
+#Part 6 - Deprivation (SIMD) geographies
 ###############################################.
 ## Packages and filepaths ----
 ###############################################.
 lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
 
-server_desktop <- "server" #change depending on what R are you using
-if (server_desktop == "server") {
+# filepaths vary depending on if using server or desktop
+if (sessionInfo()$platform == "x86_64-redhat-linux-gnu (64-bit)") {
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
   cl_out_geo <- "/conf/linkage/output/lookups/geography/"
   cl_out_depr <- "/conf/linkage/output/lookups/Unicode/Deprivation/"
   
-} else if (server_desktop == "desktop") {
+} else  {
   geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
   cl_out_geo <- "//stats/linkage/output/lookups/geography/"
   cl_out_depr <- "//stats/linkage/output/lookups/Unicode/Deprivation/"
@@ -94,20 +96,57 @@ hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("locality"))
 saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
 
 ###############################################.
-# Joining with rest of geographies
+## Part 2 - ADP lookup ----
+###############################################.
+# Creating lookup of ADPs with council area
+adp_lookup <- data.frame(
+  ca2011 = c("S12000005", "S12000006", "S12000008", 
+             "S12000010", "S12000011", "S12000013", "S12000014", "S12000015", 
+             "S12000017", "S12000018", "S12000019", "S12000020", "S12000021", 
+             "S12000023", "S12000024", "S12000026", "S12000027", "S12000028", 
+             "S12000029", "S12000030", "S12000033", "S12000034", "S12000035", 
+             "S12000036", "S12000038", "S12000039", "S12000040", "S12000041", 
+             "S12000042", "S12000044", "S12000045", "S12000046"),
+  adp = c("S11000005", "S11000006", "S11000008", "S11000051", "S11000011", 
+          "S11000032", "S11000013", "S11000014", "S11000016", "S11000017", 
+          "S11000051", "S11000019", "S11000020", "S11000022", "S11000023", 
+          "S11000025", "S11000026", "S11000027", "S11000052", "S11000029", 
+          "S11000001", "S11000002", "S11000004", "S11000012", "S11000024", 
+          "S11000030", "S11000031", "S11000003", "S11000007", "S11000052", 
+          "S11000009", "S11000015"),
+  adp_name = c("Clackmannanshire", "Dumfries & Galloway", "East Ayrshire", 
+               "Mid and East Lothian", "East Renfrewshire", "Na h-Eileanan Siar", "Falkirk", 
+               "Fife", "Highland", "Inverclyde", "Mid and East Lothian", "Moray", "North Ayrshire", 
+               "Orkney Islands", "Perth & Kinross", "Scottish Borders", "Shetland Islands", 
+               "South Ayrshire", "Lanarkshire", "Stirling", "Aberdeen City", 
+               "Aberdeenshire", "Argyll & Bute", "Edinburgh, City of", "Renfrewshire", 
+               "West Dunbartonshire", "West Lothian", "Angus", "Dundee City", 
+               "Lanarkshire", "East Dunbartonshire", "Glasgow City"))
+
+saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
+
+###############################################.
+## Part 3  - Joining all geographies ----
+###############################################.
+# reading datazone lookup which includes most geographies but adp and locality
 dz11_lookup <- read.spss(paste0(cl_out_geo, "DataZone2011/DataZone2011.sav"), 
                   to.data.frame=TRUE, use.value.labels=FALSE) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   rename(hscp_partnership = hscp2016) %>% 
   select(datazone2011, intzone2011, hb2014, ca2011, hscp_partnership)  
 
+# merging localities
 dz11_lookup <- left_join(dz11_lookup, hscp_loc, c("datazone2011")) %>% 
   select(-locality, -partnership)
+
+# merging adps
+dz11_lookup <- left_join(dz11_lookup, adp_lookup, c("ca2011")) %>% 
+  select(-adp_name)
 
 saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
 
 ###############################################.
-## Part 2 - Parent geography for IZ and locality ----
+## Part 4 - Parent geography for IZ and locality ----
 ###############################################.
 dz11_lookup <- readRDS(paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
 parent_lookup <- dz11_lookup %>% 
@@ -116,7 +155,7 @@ parent_lookup <- dz11_lookup %>%
 saveRDS(parent_lookup, paste0(geo_lookup, 'IZtoPartnership_parent_lookup.rds'))
 
 ###############################################.
-## Part 3 - Create dictionary  to have the names and not codes ----
+## Part 5 - Create dictionary  to have the names and not codes ----
 ###############################################.
 # Create HSC locality dictionary.
 local_dictio <- hscp_loc %>% rename(areaname = locality, code = hscp_locality) %>%
@@ -124,12 +163,8 @@ local_dictio <- hscp_loc %>% rename(areaname = locality, code = hscp_locality) %
 saveRDS(local_dictio, paste0(geo_lookup, 'HSClocalitydictionary.rds'))
 
 # Create ADP dictionary.
-adp_dictio <- read.spss("/conf/phip/Projects/Profiles/Data/Scotland Localities/Geo Data for Shiny.sav",
-                        to.data.frame=TRUE, use.value.labels=FALSE) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  rename(areaname = geography_name, code = geography_code) %>%
-  subset(substr(code, 1,3) == "S11") %>% 
-  mutate(areaname = gsub(" ADP", "", areaname))
+adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
+  select(-ca2011) %>% unique()
 
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
@@ -168,7 +203,7 @@ code_dictio <- rbind(scot_dictio, hb_dictio, ca_dictio, adp_dictio, part_dictio,
 saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 
 ###############################################.
-## Part 4 -Deprivation (SIMD) geographies ----
+## Part 6 -Deprivation (SIMD) geographies ----
 ###############################################.
 # Creating a data frame with all ranks for each year
 data_simd <- as.data.frame(rbind(

@@ -186,11 +186,11 @@ iz11 <- iz11 %>% select(-datazone2011, -age_grp) %>%
 
 ###############################################.
 #HSC partnership population
-hscp <- read.spss(paste0(cl_out_pop, "HSCP2016_pop_est_1982_2017.sav"),
-                       to.data.frame=TRUE, use.value.labels=FALSE) %>% 
+hscp <- readRDS(paste0(cl_out_pop, "HSCP2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = hscp2016, sex_grp = sex) 
+  rename(code = hscp2016, sex_grp = sex) %>% 
+  select(code, age, sex_grp, year, pop)
   
 ###############################################.
 #HSC locality population
@@ -204,11 +204,11 @@ locality <- left_join(dz11_base, loc_lookup, c("datazone2011")) %>%
 
 ###############################################.
 #Council area population
-ca <- read.spss(paste0(cl_out_pop, "CA2011_pop_est_1982_2017.sav"),
-                  to.data.frame=TRUE, use.value.labels=FALSE) %>% 
+ca <- readRDS(paste0(cl_out_pop, "CA2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = ca2011, sex_grp = sex) 
+  rename(code = ca2011, sex_grp = sex) %>% 
+  select(code, age, sex_grp, year, pop)
 
 ###############################################.
 # ADP population
@@ -216,7 +216,7 @@ adp <- ca %>%
   mutate(code =  #recoding from LA to ADP
            recode(code, 'S12000005' = 'S11000005', 'S12000006' = 'S11000006',  
                   'S12000008' = 'S11000008', 'S12000010' = 'S11000051' ,  'S12000011' ='S11000011' , 
-                  'S12000013'= 'S11000032' , 'S12000014' = 'S11000013',' S12000015' = 'S11000014', 
+                  'S12000013'= 'S11000032' , 'S12000014' = 'S11000013', 'S12000015' = 'S11000014', 
                   'S12000017'= 'S11000016',  'S12000018'= 'S11000017',  'S12000019'= 'S11000051' , 
                   'S12000020' = 'S11000019', 'S12000021'=  'S11000020',  'S12000023'=  'S11000022',  
                   'S12000024' = 'S11000023' , 'S12000026'= 'S11000025' ,  'S12000027' = 'S11000026', 
@@ -230,11 +230,11 @@ adp <- ca %>%
 
 ###############################################.
 #Health board population
-hb <- read.spss(paste0(cl_out_pop, "HB2014_pop_est_1981_2017.sav"),
-                to.data.frame=TRUE, use.value.labels=FALSE) %>% 
+hb <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = hb2014, sex_grp = sex) 
+  rename(code = hb2014, sex_grp = sex) %>% 
+  select(code, age, sex_grp, year, pop)
 
 ###############################################.
 #Scotland population
@@ -250,6 +250,8 @@ saveRDS(all_pop01, file=paste0(pop_lookup, "basefile_DZ01.rds"))
 
 all_pop11 <- rbind(iz11, ca, adp, hb, hscp, scotland, locality) %>% 
   rename(denominator=pop) %>% create_agegroups() #recoding age
+
+all_pop11 <- all_pop11 %>% filter(year<2018) # TEMPORARY UNTIL DZ pop for 2018 ready
 
 saveRDS(all_pop11, file=paste0(pop_lookup, "basefile_DZ11.rds"))
 

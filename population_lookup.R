@@ -244,12 +244,14 @@ scotland <- hb %>% group_by(year, sex_grp, age) %>%
 ###############################################.
 #merging all geographical levels
 all_pop01 <- rbind(iz01, ca, adp, hb, hscp, scotland, locality) %>% 
-  rename(denominator=pop) %>% create_agegroups() #recoding age
+  rename(denominator=pop) %>% create_agegroups() %>% #recoding age
+  mutate(year = as.numeric(year))
 
 saveRDS(all_pop01, file=paste0(pop_lookup, "basefile_DZ01.rds"))
 
 all_pop11 <- rbind(iz11, ca, adp, hb, hscp, scotland, locality) %>% 
-  rename(denominator=pop) %>% create_agegroups() #recoding age
+  rename(denominator=pop) %>% create_agegroups() %>%  #recoding age
+  mutate(year = as.numeric(year))
 
 all_pop11 <- all_pop11 %>% filter(year<2018) # TEMPORARY UNTIL DZ pop for 2018 ready
 

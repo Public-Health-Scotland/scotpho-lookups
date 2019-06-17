@@ -233,7 +233,8 @@ data_simd <- as.data.frame(rbind(
   create_simd(file_name = "DataZone2011", simd_version =2016, year = 2014),
   create_simd(file_name = "DataZone2011", simd_version =2016, year = 2015),
   create_simd(file_name = "DataZone2011", simd_version =2016, year = 2016),
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2017)))
+  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2017),
+  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2018)))
 
 saveRDS(data_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
 

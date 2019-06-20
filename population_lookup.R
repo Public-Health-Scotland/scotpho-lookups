@@ -322,6 +322,7 @@ create_pop(dz = "DZ11", lower = 65, upper = 200, name = "pop_65+", council = T,
 create_pop(dz = "DZ11", lower = 75, upper = 200, name = "pop_75+")
 create_pop(dz = "DZ11", lower = 85, upper = 200, name = "pop_85+")
 create_pop(dz = "DZ11", lower = 12, upper = 200, name = "pop_12+", council = T)
+create_pop(dz = "DZ11", lower = 0, upper = 4, name = "pop_under5", council = T)
 create_pop(dz = "DZ11", lower = 0, upper = 17, name = "pop_under18", council = T, adp = T)
 create_pop(dz = "DZ11", lower = 0, upper = 15, name = "pop_under16", council = T, stdrate = T)
 create_pop(dz = "DZ11", lower = 0, upper = 25, name = "pop_under26", council = T)

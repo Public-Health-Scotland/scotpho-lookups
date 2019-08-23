@@ -16,7 +16,7 @@
 lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
 
 # filepaths vary depending on if using server or desktop
-if (sessionInfo()$platform == "x86_64-redhat-linux-gnu (64-bit)") {
+if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
   cl_out_geo <- "/conf/linkage/output/lookups/geography/"
   cl_out_depr <- "/conf/linkage/output/lookups/Unicode/Deprivation/"

@@ -18,13 +18,13 @@ lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
 # filepaths vary depending on if using server or desktop
 if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-  cl_out_geo <- "/conf/linkage/output/lookups/geography/"
+  cl_out_geo <- "/conf/linkage/output/lookups/Unicode/Geography/"
   cl_out_depr <- "/conf/linkage/output/lookups/Unicode/Deprivation/"
-  
 } else  {
   geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
-  cl_out_geo <- "//stats/linkage/output/lookups/geography/"
+  cl_out_geo <- "//stats/linkage/output/lookups/Unicode/Geography/"
   cl_out_depr <- "//stats/linkage/output/lookups/Unicode/Deprivation/"
+
 }
   
 ###############################################.
@@ -32,7 +32,7 @@ if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc
 ###############################################.
 #Function to create deprivation rank data set for different years 
 #and different simd versions
-create_simd <- function(file_name, simd_version, year) {
+create_simd <- function(file_name, simd_version, year, list_pos) {
   
   #Creating quintile variables to keep
   simd_sc <- paste0("simd", simd_version, "_sc_quintile")
@@ -44,15 +44,13 @@ create_simd <- function(file_name, simd_version, year) {
   }
   
   if (file_name == "DataZone2001") {
-    data_simd <- read.spss(paste0(cl_out_depr, 'DataZone2001_all_simd.sav'),
-                      to.data.frame=TRUE, use.value.labels=FALSE) 
+    data_simd <- readRDS(paste0(cl_out_depr, 'DataZone2001_all_simd.rds')) 
   } else if (file_name == "DataZone2011") {
-    data_simd <- read.spss(paste0(cl_out_depr, 'DataZone2011_simd2016.sav'),
-                      to.data.frame=TRUE, use.value.labels=FALSE) 
+    data_simd <- readRDS(paste0(cl_out_depr, 'DataZone2011_simd2016.rds'))
   }
   
   data_simd <- data_simd %>% setNames(tolower(names(.))) %>%    #variables to lower case
-    select(eval(tolower(file_name)), hb2014, ca2011, eval(simd_sc), eval(simd_hb), eval(simd_ca)) %>% 
+    select(eval(tolower(file_name)), hb2019, ca2019, eval(simd_sc), eval(simd_hb), eval(simd_ca)) %>% 
     rename_(datazone = tolower(file_name), sc_quin = eval(simd_sc), 
             hb_quin = eval(simd_hb), ca_quin = eval(simd_ca)) %>% 
     mutate(year = year) 
@@ -65,16 +63,18 @@ create_simd <- function(file_name, simd_version, year) {
   } else {
     data_simd <- data_simd
   }
+  
+  data_depr_simd[[list_pos]] <<- data_simd #assigning to list
+  
 }
 
 ###############################################.
 ## Part 1 - HSC locality lookup ----
 ###############################################.
-hscp_loc <- read.spss(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.sav"), 
-          to.data.frame=TRUE, use.value.labels=FALSE) %>% 
+hscp_loc <- readRDS(paste0(cl_out_geo, "HSCP Locality/HSCP Localities_DZ11_Lookup_20180903.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
-  rename(datazone2011 = datazone) %>% 
-  select(datazone2011, locality, partnership) %>% arrange(locality, partnership) 
+  select(datazone2011, hscplocality, hscp2019name) %>% 
+  arrange(hscplocality, hscp2019name)
 
 ##Create artificial standard 9 digit code to identify unique localityfor use 
 #in matching files to generate indicator data.
@@ -82,16 +82,16 @@ hscp_loc <- read.spss(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.s
 #standard geography code for an area but these technically haven't been created for HSCPs yet.
 ##Beware some localities might have common names to those used by other HSCPs 
 #(e.g. 'East'/'West' are commonly used as locality names by more than one partnership ).
-loc_seq <- seq_len(length(unique(hscp_loc$locality)))
+loc_seq <- seq_len(length(unique(hscp_loc$hscplocality)))
 loc_zeros <- case_when(nchar(loc_seq) == 1 ~ "00000",
                        nchar(loc_seq) == 2 ~ "0000",
                        nchar(loc_seq) == 3 ~ "000")
 
 loc_code <- paste0("S99", loc_zeros, loc_seq)
 
-loc_code <- data.frame(hscp_locality = loc_code, locality = unique(hscp_loc$locality))
+loc_code <- data.frame(hscp_locality = loc_code, hscplocality = unique(hscp_loc$hscplocality))
 
-hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("locality"))
+hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("hscplocality"))
 
 saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
 
@@ -100,13 +100,13 @@ saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
 ###############################################.
 # Creating lookup of ADPs with council area
 adp_lookup <- data.frame(
-  ca2011 = c("S12000005", "S12000006", "S12000008", 
-             "S12000010", "S12000011", "S12000013", "S12000014", "S12000015", 
+  ca2019 = c("S12000005", "S12000006", "S12000008", 
+             "S12000010", "S12000011", "S12000013", "S12000014", "S12000047", 
              "S12000017", "S12000018", "S12000019", "S12000020", "S12000021", 
-             "S12000023", "S12000024", "S12000026", "S12000027", "S12000028", 
+             "S12000023", "S12000048", "S12000026", "S12000027", "S12000028", 
              "S12000029", "S12000030", "S12000033", "S12000034", "S12000035", 
              "S12000036", "S12000038", "S12000039", "S12000040", "S12000041", 
-             "S12000042", "S12000044", "S12000045", "S12000046"),
+             "S12000042", "S12000050", "S12000045", "S12000049"),
   adp = c("S11000005", "S11000006", "S11000008", "S11000051", "S11000011", 
           "S11000032", "S11000013", "S11000014", "S11000016", "S11000017", 
           "S11000051", "S11000019", "S11000020", "S11000022", "S11000023", 
@@ -129,18 +129,19 @@ saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
 ## Part 3  - Joining all geographies ----
 ###############################################.
 # reading datazone lookup which includes most geographies but adp and locality
-dz11_lookup <- read.spss(paste0(cl_out_geo, "DataZone2011/DataZone2011.sav"), 
-                  to.data.frame=TRUE, use.value.labels=FALSE) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  rename(hscp_partnership = hscp2016) %>% 
-  select(datazone2011, intzone2011, hb2014, ca2011, hscp_partnership)  
+dz11_lookup <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  select(datazone2011, intzone2011, ca2019, hb2019, hscp2019) %>% unique %>% 
+  #excluding datazone assigned to two councils due to boundary change. It mostly 
+  # falls into Glasgow so taking out the N Lanarkshire one
+  filter(!(datazone2011 == "S01010117" & ca2019 == "S12000050"))
 
 # merging localities
 dz11_lookup <- left_join(dz11_lookup, hscp_loc, c("datazone2011")) %>% 
-  select(-locality, -partnership)
+  select(-hscplocality, -hscp2019name)
 
 # merging adps
-dz11_lookup <- left_join(dz11_lookup, adp_lookup, c("ca2011")) %>% 
+dz11_lookup <- left_join(dz11_lookup, adp_lookup, c("ca2019")) %>% 
   select(-adp_name)
 
 saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
@@ -148,8 +149,7 @@ saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds')
 ###############################################.
 ## Part 4 - Parent geography for IZ and locality ----
 ###############################################.
-dz11_lookup <- readRDS(paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
-parent_lookup <- dz11_lookup %>% 
+parent_lookup <- dz11_lookup %>% rename(hscp_partnership = hscp2019) %>% 
   select(intzone2011, hscp_locality, hscp_partnership) %>% unique
 
 saveRDS(parent_lookup, paste0(geo_lookup, 'IZtoPartnership_parent_lookup.rds'))
@@ -158,38 +158,51 @@ saveRDS(parent_lookup, paste0(geo_lookup, 'IZtoPartnership_parent_lookup.rds'))
 ## Part 5 - Create dictionary  to have the names and not codes ----
 ###############################################.
 # Create HSC locality dictionary.
-local_dictio <- hscp_loc %>% rename(areaname = locality, code = hscp_locality) %>%
+local_dictio <- hscp_loc %>% rename(areaname = hscplocality, code = hscp_locality) %>%
   select(areaname, code) %>% unique
 saveRDS(local_dictio, paste0(geo_lookup, 'HSClocalitydictionary.rds'))
 
 # Create ADP dictionary.
 adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
-  select(-ca2011) %>% unique()
+  select(-ca2019) %>% unique()
 
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
 # Create IZ dictionary.
-iz_dictio <- read_csv(paste0(cl_out_geo, "/Codes_and_Names/Intermediate Zone 2011 Lookup.csv")) %>% 
-  rename(areaname = IntermediateZone2011Name, code = IntermediateZone2011Code) 
+iz_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  select(intzone2011, intzone2011name) %>% unique %>% 
+  rename(areaname = intzone2011name, code = intzone2011)
   
 saveRDS(iz_dictio, paste0(geo_lookup, 'IZ11dictionary.rds'))
 
 # Create CA dictionary.
-ca_dictio <- read_csv(paste0(cl_out_geo, "/Codes_and_Names/Council Area 2011 Lookup.csv")) %>% 
-  rename(areaname = CouncilArea2011Name, code = CouncilArea2011Code) 
+ca_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  select(ca2019, ca2019name) %>% unique %>% 
+  #excluding extra council caused by datazone assigned to two councils 
+  filter(!(ca2019name == "Glasgow City" & ca2019 == "S12000050")) %>% 
+  rename(areaname = ca2019name, code = ca2019)
   
 saveRDS(ca_dictio, paste0(geo_lookup, 'CAdictionary.rds'))
 
 # create HB dictionary.
-hb_dictio <- read_csv(paste0(cl_out_geo, "/Codes_and_Names/Health Board Area 2014 Lookup.csv")) %>% 
-  rename(areaname = NRSHealthBoardAreaName , code = HealthBoardArea2014Code ) %>% 
-  select(-HealthBoardArea2014Name)
-
+hb_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  select(hb2019, hb2019name) %>% unique  %>% 
+  #excluding extra council caused by datazone assigned to two councils 
+  filter(!(hb2019name == "NHS Greater Glasgow and Clyde" & hb2019 == "S08000032")) %>% 
+  rename(areaname = hb2019name, code = hb2019)
+  
 saveRDS(hb_dictio, paste0(geo_lookup, 'HBdictionary.rds'))
 
 # create HSC partnership dictionary.
-part_dictio <- read_csv(paste0(cl_out_geo, "/Codes_and_Names/Integration Authority 2016 Lookup.csv")) %>% 
-  rename(areaname = IntegrationAuthority2016Name , code = IntegrationAuthority2016Code ) 
+part_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  select(hscp2019, hscp2019name) %>% unique  %>% 
+  #excluding extra council caused by datazone assigned to two councils 
+  filter(!(hscp2019name == "Glasgow City" & hscp2019 == "S37000035")) %>% 
+  rename(areaname = hscp2019name, code = hscp2019)
 
 saveRDS(part_dictio, paste0(geo_lookup, 'HSCPdictionary.rds'))
 
@@ -206,36 +219,22 @@ saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 ## Part 6 -Deprivation (SIMD) geographies ----
 ###############################################.
 # Creating a data frame with all ranks for each year
-data_simd <- as.data.frame(rbind(
-  #simd2004
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 1996),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 1997),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 1998),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 1999),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 2000),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 2001),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 2002),
-  create_simd(file_name = "DataZone2001", simd_version =2004, year = 2003),
-  #simd2006
-  create_simd(file_name = "DataZone2001", simd_version =2006, year = 2004),
-  create_simd(file_name = "DataZone2001", simd_version =2006, year = 2005),
-  create_simd(file_name = "DataZone2001", simd_version =2006, year = 2006),
-  #simd2009
-  create_simd(file_name = "DataZone2001", simd_version ="2009v2", year = 2007),
-  create_simd(file_name = "DataZone2001", simd_version ="2009v2", year = 2008),
-  create_simd(file_name = "DataZone2001", simd_version ="2009v2", year = 2009),
-  #simd2012
-  create_simd(file_name = "DataZone2001", simd_version =2012, year = 2010),
-  create_simd(file_name = "DataZone2001", simd_version =2012, year = 2011),
-  create_simd(file_name = "DataZone2001", simd_version =2012, year = 2012),
-  create_simd(file_name = "DataZone2001", simd_version =2012, year = 2013),
-  #simd2016
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2014),
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2015),
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2016),
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2017),
-  create_simd(file_name = "DataZone2011", simd_version =2016, year = 2018)))
+data_depr_simd <- list() #creating empty list for placing data created by function
 
-saveRDS(data_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
+# The function creates the dataset and assigns it to the list
+mapply(create_simd, file_name = "DataZone2001", simd_version = 2004, 
+       year = 1996:2003, list_pos = 1:8) #simd version 2004
+mapply(create_simd, file_name = "DataZone2001", simd_version = 2006, 
+       year = 2004:2006, list_pos = 9:11) #simd version 2006
+mapply(create_simd, file_name = "DataZone2001", simd_version = "2009v2", 
+       year = 2007:2009, list_pos = 12:14) #simd version 2009
+mapply(create_simd, file_name = "DataZone2001", simd_version = 2012, 
+       year = 2010:2013, list_pos = 15:18) #simd version 2012
+mapply(create_simd, file_name = "DataZone2011", simd_version = 2016, 
+       year = 2014:2018, list_pos = 19:23) #simd version 2016
+
+data_depr_simd <- do.call("rbind", data_depr_simd) # converting from list into dataframe
+
+saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
 
 ##END

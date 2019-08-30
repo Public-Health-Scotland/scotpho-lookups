@@ -10,7 +10,6 @@
 ## Packages/Filepaths ----
 ###############################################.
 library(dplyr)
-library(foreign) 
 library(reshape2)
 
 # filepaths vary depending on if using server or desktop
@@ -119,13 +118,23 @@ create_pop <- function(lower, upper, name, dz, council = F, adp = F, stdrate = F
 }
 
 ###############################################.
+#This function groups the data for the variables selected and then aggregates it
+#It works for the different types of quintiles and for all measures
+create_quintile_data <- function(group_vars, geo, quint) {
+  
+  depr_pop_base %>% group_by_at(c("age_grp", "sex_grp", "age", "year", geo, quint)) %>% 
+    summarise(denominator = sum(denominator, na.rm =T)) %>% 
+    rename_(code = geo, quintile = quint) %>% ungroup() %>% 
+    mutate(quint_type = quint)
+}
+
+###############################################.
 ## Part 2 - Basefiles based on DZ01 and DZ11 ----
 ###############################################.
 # They are used for custom geography requests and for creating the rest of lookups
 ###############################################.
 # Datazone 2001.
-dz01_base <- read.spss(paste0(cl_out_pop, "DataZone2001_pop_est_2001_2014.sav"),
-                       to.data.frame=TRUE, use.value.labels=FALSE) %>% 
+dz01_base <- readRDS(paste0(cl_out_pop, "DataZone2001_pop_est_2001_2014.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(-c(total_pop)) %>% 
   rename(code = intzone2001, sex_grp = sex) %>% 
@@ -156,7 +165,7 @@ iz01 <- iz01 %>% select(-datazone2001, -age_grp) %>%
 
 ###############################################.
 # Datazone 2011.
-dz11_base <- readRDS(paste0(cl_out_pop, "DataZone2011_pop_est_2011_2017.rds")) %>% 
+dz11_base <- readRDS(paste0(cl_out_pop, "DataZone2011_pop_est_2011_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(-c(total_pop)) %>% 
   rename(code = intzone2011, sex_grp = sex) %>% 
@@ -189,7 +198,7 @@ iz11 <- iz11 %>% select(-datazone2011, -age_grp) %>%
 hscp <- readRDS(paste0(cl_out_pop, "HSCP2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = hscp2016, sex_grp = sex) %>% 
+  rename(code = hscp2019, sex_grp = sex) %>% 
   select(code, age, sex_grp, year, pop)
   
 ###############################################.
@@ -207,7 +216,7 @@ locality <- left_join(dz11_base, loc_lookup, c("datazone2011")) %>%
 ca <- readRDS(paste0(cl_out_pop, "CA2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = ca2011, sex_grp = sex) %>% 
+  rename(code = ca2019, sex_grp = sex) %>% 
   select(code, age, sex_grp, year, pop)
 
 ###############################################.
@@ -224,7 +233,7 @@ adp <- ca %>%
                   'S12000033'=  'S11000001',  'S12000034'= 'S11000002',  'S12000035' =  'S11000004',  
                   'S12000036' =  'S11000012', 'S12000038'=  'S11000024',  'S12000039'=  'S11000030' ,  
                   'S12000040' = 'S11000031', 'S12000041'=  'S11000003',  'S12000042'= 'S11000007',  
-                  'S12000044' =  'S11000052' , 'S12000045' = 'S11000009', 'S12000046'= 'S11000015')) %>% 
+                  'S12000050' =  'S11000052' , 'S12000045' = 'S11000009', 'S12000049'= 'S11000015')) %>% 
   group_by(year, sex_grp, age, code) %>% 
   summarise(pop = sum(pop)) %>% ungroup()
 
@@ -233,7 +242,7 @@ adp <- ca %>%
 hb <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   subset(year>2001) %>%  #select only 2002+
-  rename(code = hb2014, sex_grp = sex) %>% 
+  rename(code = hb2019, sex_grp = sex) %>% 
   select(code, age, sex_grp, year, pop)
 
 ###############################################.
@@ -253,15 +262,12 @@ all_pop11 <- rbind(iz11, ca, adp, hb, hscp, scotland, locality) %>%
   rename(denominator=pop) %>% create_agegroups() %>%  #recoding age
   mutate(year = as.numeric(year))
 
-all_pop11 <- all_pop11 %>% filter(year<2018) # TEMPORARY UNTIL DZ pop for 2018 ready
-
 saveRDS(all_pop11, file=paste0(pop_lookup, "basefile_DZ11.rds"))
 
 ###############################################.
 ## Part 3 - Population by deprivation quintile basefile ----
 ###############################################.
 #This is better to be run in R server.
-
 dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds")) %>% 
   filter(year<2014) %>% # 2014 uses simd2016 based on dz2011
   rename(datazone = datazone2001)
@@ -278,26 +284,16 @@ depr_lookup <- readRDS(paste0(geo_lookup, 'deprivation_geography.rds')) %>%
 
 depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"))
 
-#This function groups the data for the variables selected and then aggregates it
-#It works for the different types of quintiles and for all measures
-create_quintile_data <- function(group_vars, geo, quint) {
-
-  depr_pop_base %>% group_by_at(c("age_grp", "sex_grp", "age", "year", geo, quint)) %>% 
-      summarise(denominator = sum(denominator, na.rm =T)) %>% 
-      rename_(code = geo, quintile = quint) %>% ungroup() %>% 
-      mutate(quint_type = quint)
-}
-
 depr_pop_base <- rbind( 
   create_quintile_data(geo = "scotland", quint = "sc_quin"),   #Scotland 
   #Health boards using national quintiles
-  create_quintile_data(geo = "hb2014", quint = "sc_quin"),
+  create_quintile_data(geo = "hb2019", quint = "sc_quin"),
   #Health boards using health board quintiles
-  create_quintile_data(geo = "hb2014", quint = "hb_quin"),
+  create_quintile_data(geo = "hb2019", quint = "hb_quin"),
   #Council area using national quintiles
-  create_quintile_data(geo = "ca2011", quint = "sc_quin"),
+  create_quintile_data(geo = "ca2019", quint = "sc_quin"),
   #Council area using concil quintiles
-  create_quintile_data(geo = "ca2011", quint = "ca_quin"))
+  create_quintile_data(geo = "ca2019", quint = "ca_quin"))
 
 depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, quint_type) %>% 
   summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
@@ -343,15 +339,6 @@ create_pop(dz = "DZ11", lower = 16, upper = 25, name = "pop_16to25")
 create_pop(dz = "DZ11", lower = 15, upper = 25, name = "pop_15to25", council = T, stdrate = T)
 create_pop(dz = "DZ11", lower = 15, upper = 44, name = "pop_15to44", council = T, 
            stdrate = T, deprivation = T)
-
-###############################################.
-# DZ01
-create_pop(dz = "DZ01", lower = 0, upper = 200, name = "pop_allages", stdrate = T)
-create_pop(dz = "DZ01", lower = 60, upper = 200, name = "pop_60+")
-create_pop(dz = "DZ01", lower = 16, upper = 200, name = "pop_16+", stdrate = T)
-create_pop(dz = "DZ01", lower = 18, upper = 200, name = "pop_18+", stdrate = T)
-create_pop(dz = "DZ01", lower = 0, upper = 74, name = "pop_under75", stdrate = T)
-create_pop(dz = "DZ01", lower = 15, upper = 44, name = "pop_15to44", stdrate = T)
 
 ###############################################.
 # Working age population

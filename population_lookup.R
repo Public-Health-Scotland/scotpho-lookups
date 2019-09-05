@@ -10,18 +10,17 @@
 ## Packages/Filepaths ----
 ###############################################.
 library(dplyr)
-library(reshape2)
+library(tidyr) # long to wide format
+library(httr) # api connection
+library(jsonlite)  # transforming JSON files into dataframes
 
 # filepaths vary depending on if using server or desktop
 if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
   pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
   geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-  cl_out_pop <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/"
-  
 } else {
   pop_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Population/"
   geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
-  cl_out_pop <- "//stats/linkage/output/lookups/Unicode/Populations/Estimates/"
 }
 
 ###############################################.
@@ -39,6 +38,37 @@ create_agegroups <- function(df) {
     TRUE ~ as.numeric(age)
   ))
 }
+
+###############################################.
+# This function extract the data for each geographical level from the NHS data platform
+# and then formats it in the way is neeeded. It uses two parameters, one for the 
+# resource-id used in the plaform and one for the name of the geography variable for that data
+extract_open_data <- function(resource_id, geography) {
+  
+  # URL used for data extraction
+  open_data_url <- "https://www.opendata.nhs.scot/api/3/action/datastore_search?resource_id="
+  
+  # After finding out the length of the file we can extract the whole thing
+  # Limit is set to 1 million, check nothing is bigger than that
+  data_extraction <-  GET(paste0(open_data_url, resource_id, "&limit=1000000"))
+  # Checking if request has worked
+  print(paste0("A value of 200 means the server has received the request:", data_extraction$status_code))
+  # It's a JSON file, so transforming into something more usable in R
+  data_extraction <- rawToChar(data_extraction$content) %>% fromJSON()
+  data_extraction <- data_extraction$result$records %>% #extracting data  
+    setNames(tolower(names(.)))   #variables to lower case
+  
+  # Formatting the data in the way needed
+  data_extraction <- data_extraction %>%
+    filter(year > 2001 & substr({{geography}}, 1, 3) != "S92") %>% #years and no Scotland
+    mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%
+    select(year, sex, {{geography}}, age0:age90plus) %>%
+    gather(age, pop, -c(year, sex, {{geography}})) %>% #wide to long format
+    mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
+    rename(code = {{geography}}, sex_grp = sex)
+  
+}
+
 ###############################################.
 # This functions takes a basefile (DZ01 or DZ11), selects the age of interest and
 # produces files for % and crude rates and for standard rates. It also allows you
@@ -133,95 +163,57 @@ create_quintile_data <- function(group_vars, geo, quint) {
 ###############################################.
 # They are used for custom geography requests and for creating the rest of lookups
 ###############################################.
-# Datazone 2001.
-dz01_base <- readRDS(paste0(cl_out_pop, "DataZone2001_pop_est_2001_2014.rds")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  select(-c(total_pop)) %>% 
-  rename(code = intzone2001, sex_grp = sex) %>% 
-  subset(year>2001) %>%  #select only 2002+
-  mutate(sex_grp = recode(sex_grp, "M" = "1", 'F' = "2")) #Recoding sex
+ # Datazone 2001.
+dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", dz2001) %>% 
+  create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
 
-dz01_base <- dz01_base[1:95] #selecting variables of interest
-
-#Converting from wide to long format
-dz01_base <- dz01_base %>% melt(id.vars = c("year", "datazone2001", "sex_grp", "code"),
-  variable.name = "age", value.name = "pop") %>% 
-  #Converting age in numeric and recoding age
-  mutate(age = as.numeric(gsub("age|plus", "", age))) %>% 
-  create_agegroups()
-
-iz01 <- dz01_base #iz basefile
-
-dz01_base <- dz01_base %>% select(-c(code)) %>% rename(denominator = pop)
 saveRDS(dz01_base, file=paste0(pop_lookup, "DZ01_pop_basefile.rds"))
 rm(dz01_base) #freeing up memory
 # dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds"))
 
 ###############################################.
-#Creating basefile for IZ2001
-iz01 <- iz01 %>% select(-datazone2001, -age_grp) %>% 
-  group_by(year, sex_grp, age, code) %>% #aggregating
-  summarise(pop = sum(pop)) %>% ungroup()
-
-###############################################.
 # Datazone 2011.
-dz11_base <- readRDS(paste0(cl_out_pop, "DataZone2011_pop_est_2011_2018.rds")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  select(-c(total_pop)) %>% 
-  rename(code = intzone2011, sex_grp = sex) %>% 
-  mutate(sex_grp = recode(sex_grp, "M" = "1", 'F' = "2")) #Recoding sex
+dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", dz2011) %>% 
+  create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
+# If the previous one times out/fails try this, but the link will change every year
+# dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_30082019.csv") %>% 
+#   filter(year > 2001 & substr(dz2011, 1, 3) != "S92") %>% #years and no Scotland
+#   mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%
+#   select(year, sex, dz2011, age0:age90plus) %>%
+#   gather(age, pop, -c(year, sex, dz2011)) %>% #wide to long format
+#   mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
+#   create_agegroups()  %>% 
+#   rename(sex_grp = sex, denominator = pop, datazone2011 =code)
 
-dz11_base <- dz11_base[1:95] #selecting variables of interest
-
-
-#Converting from wide to long format
-dz11_base <- dz11_base %>% melt(id.vars = c("year", "datazone2011", "sex_grp", "code"),
-                                variable.name = "age", value.name = "pop") %>% 
-  #Converting age in numeric and recoding age
-  mutate(age = as.numeric(gsub("age|plus", "", age))) %>% 
-  create_agegroups()
-
-iz11 <- dz11_base #iz basefile
-
-dz11_base <- dz11_base %>% select(-c(code)) %>% rename(denominator = pop)
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 
 ###############################################.
-#Creating basefile for IZ2011
-iz11 <- iz11 %>% select(-datazone2011, -age_grp) %>% 
-  group_by(year, sex_grp, age, code) %>% 
-  summarise(pop = sum(pop)) %>% ungroup()
+# Intermediate zones, councils, health boards and HSC partnerships
+hscp_pop <- extract_open_data("c3a393ce-253b-4c75-82dc-06b1bb5638a3", hscp2016) 
+hb_pop <- extract_open_data("27a72cc8-d6d8-430c-8b4f-3109a9ceadb1", hb2014) 
+ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca2011) 
+iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", iz2011) 
+iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", iz2001)
 
 ###############################################.
-#HSC partnership population
-hscp <- readRDS(paste0(cl_out_pop, "HSCP2019_pop_est_1981_2018.rds")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  subset(year>2001) %>%  #select only 2002+
-  rename(code = hscp2019, sex_grp = sex) %>% 
-  select(code, age, sex_grp, year, pop)
-  
+#Scotland population
+scot_pop <- hb_pop %>% group_by(year, sex_grp, age) %>% 
+  summarise(pop = sum(pop)) %>% ungroup() %>% mutate(code = "S00000001")
+
 ###############################################.
 #HSC locality population
 loc_lookup <- readRDS(paste0(geo_lookup, "DataZone11_All_Geographies_Lookup.rds")) %>% 
   select(datazone2011, hscp_locality) %>% rename(code = hscp_locality) 
 
 #Merging with locality lookup
-locality <- left_join(dz11_base, loc_lookup, c("datazone2011")) %>% 
+local_pop <- left_join(dz11_base, loc_lookup, c("datazone2011")) %>% 
   select(-datazone2011, age_grp) %>% group_by(year, sex_grp, age, code) %>% 
   summarise(pop = sum(denominator)) %>% ungroup()
 
 ###############################################.
-#Council area population
-ca <- readRDS(paste0(cl_out_pop, "CA2019_pop_est_1981_2018.rds")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  subset(year>2001) %>%  #select only 2002+
-  rename(code = ca2019, sex_grp = sex) %>% 
-  select(code, age, sex_grp, year, pop)
-
-###############################################.
 # ADP population
-adp <- ca %>% 
+adp_pop <- ca_pop %>% 
   mutate(code =  #recoding from LA to ADP
            recode(code, 'S12000005' = 'S11000005', 'S12000006' = 'S11000006',  
                   'S12000008' = 'S11000008', 'S12000010' = 'S11000051' ,  'S12000011' ='S11000011' , 
@@ -238,27 +230,14 @@ adp <- ca %>%
   summarise(pop = sum(pop)) %>% ungroup()
 
 ###############################################.
-#Health board population
-hb <- readRDS(paste0(cl_out_pop, "HB2019_pop_est_1981_2018.rds")) %>% 
-  setNames(tolower(names(.))) %>%  #variables to lower case
-  subset(year>2001) %>%  #select only 2002+
-  rename(code = hb2019, sex_grp = sex) %>% 
-  select(code, age, sex_grp, year, pop)
-
-###############################################.
-#Scotland population
-scotland <- hb %>% group_by(year, sex_grp, age) %>% 
-  summarise(pop = sum(pop)) %>% ungroup() %>% mutate(code = "S00000001")
-
-###############################################.
 #merging all geographical levels
-all_pop01 <- rbind(iz01, ca, adp, hb, hscp, scotland, locality) %>% 
+all_pop01 <- rbind(iz01_pop, ca_pop, adp_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
   rename(denominator=pop) %>% create_agegroups() %>% #recoding age
   mutate(year = as.numeric(year))
 
 saveRDS(all_pop01, file=paste0(pop_lookup, "basefile_DZ01.rds"))
 
-all_pop11 <- rbind(iz11, ca, adp, hb, hscp, scotland, locality) %>% 
+all_pop11 <- rbind(iz11_pop, ca_pop, adp_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
   rename(denominator=pop) %>% create_agegroups() %>%  #recoding age
   mutate(year = as.numeric(year))
 

@@ -13,7 +13,10 @@
 ###############################################.
 ## Packages and filepaths ----
 ###############################################.
-lapply(c("dplyr", "readr", "foreign"), library, character.only = TRUE)
+lapply(c("dplyr", "readr"), library, character.only = TRUE)
+library(httr) # api connection
+library(jsonlite)  # transforming JSON files into dataframes
+
 
 # filepaths vary depending on if using server or desktop
 if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
@@ -69,9 +72,23 @@ create_simd <- function(file_name, simd_version, year, list_pos) {
 }
 
 ###############################################.
+# Function to create dictionaries for the different areas
+create_dictionary <- function(area_name, area_code, filename) {
+  dictio <- data_extraction %>% 
+    select({{area_name}}, {{area_code}}) %>% 
+    rename(areaname = {{area_name}}, code = {{area_code}}) %>% unique
+  
+  saveRDS(dictio, paste0(geo_lookup, filename, 'dictionary.rds'))
+  
+  dictio #retrieving object
+}
+
+###############################################.
 ## Part 1 - HSC locality lookup ----
 ###############################################.
-hscp_loc <- readRDS(paste0(cl_out_geo, "HSCP Locality/HSCP Localities_DZ11_Lookup_20180903.rds")) %>% 
+#  This files comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
+# Check that this is the latest version available
+hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(datazone2011, hscplocality, hscp2019name) %>% 
   arrange(hscplocality, hscp2019name)
@@ -128,13 +145,26 @@ saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
 ###############################################.
 ## Part 3  - Joining all geographies ----
 ###############################################.
-# reading datazone lookup which includes most geographies but adp and locality
-dz11_lookup <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
-  setNames(tolower(names(.))) %>%   #variables to lower case
-  select(datazone2011, intzone2011, ca2019, hb2019, hscp2019) %>% unique %>% 
-  #excluding datazone assigned to two councils due to boundary change. It mostly 
-  # falls into Glasgow so taking out the N Lanarkshire one
-  filter(!(datazone2011 == "S01010117" & ca2019 == "S12000050"))
+# reading datazone lookup  from open data platform 
+# which includes most geographies but adp and locality
+# URL used for data extraction
+open_data_url <- "https://www.opendata.nhs.scot/api/3/action/datastore_search?resource_id="
+
+# Limit is set to 1 million, check nothing is bigger than that
+data_extraction <-  GET(paste0(open_data_url, "395476ab-0720-4740-be07-ff4467141352", 
+                               "&limit=1000000"))
+
+# It's a JSON file, so transforming into something more usable in R
+data_extraction <- rawToChar(data_extraction$content) %>% fromJSON()
+data_extraction <- data_extraction$result$records %>% #extracting data  
+  setNames(tolower(names(.)))   #variables to lower case
+
+# Creating dz lookup
+dz11_lookup <- data_extraction %>% 
+  select(dz2011, iz2011, ca2011, hscp2016, hb2014) %>% 
+  # the variables contain a year, but they have the latest(2019) codes
+  rename(datazone2011 = dz2011, intzone2011 =iz2011, ca2019 = ca2011,
+         hscp2019 = hscp2016, hb2019 = hb2014)
 
 # merging localities
 dz11_lookup <- left_join(dz11_lookup, hscp_loc, c("datazone2011")) %>% 
@@ -168,43 +198,11 @@ adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
 
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
-# Create IZ dictionary.
-iz_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
-  setNames(tolower(names(.))) %>%   #variables to lower case
-  select(intzone2011, intzone2011name) %>% unique %>% 
-  rename(areaname = intzone2011name, code = intzone2011)
-  
-saveRDS(iz_dictio, paste0(geo_lookup, 'IZ11dictionary.rds'))
-
-# Create CA dictionary.
-ca_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
-  setNames(tolower(names(.))) %>%   #variables to lower case
-  select(ca2019, ca2019name) %>% unique %>% 
-  #excluding extra council caused by datazone assigned to two councils 
-  filter(!(ca2019name == "Glasgow City" & ca2019 == "S12000050")) %>% 
-  rename(areaname = ca2019name, code = ca2019)
-  
-saveRDS(ca_dictio, paste0(geo_lookup, 'CAdictionary.rds'))
-
-# create HB dictionary.
-hb_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
-  setNames(tolower(names(.))) %>%   #variables to lower case
-  select(hb2019, hb2019name) %>% unique  %>% 
-  #excluding extra council caused by datazone assigned to two councils 
-  filter(!(hb2019name == "NHS Greater Glasgow and Clyde" & hb2019 == "S08000032")) %>% 
-  rename(areaname = hb2019name, code = hb2019)
-  
-saveRDS(hb_dictio, paste0(geo_lookup, 'HBdictionary.rds'))
-
-# create HSC partnership dictionary.
-part_dictio <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/Scottish Postcode Directory/Scottish_Postcode_Directory_2019_2.rds') %>% 
-  setNames(tolower(names(.))) %>%   #variables to lower case
-  select(hscp2019, hscp2019name) %>% unique  %>% 
-  #excluding extra council caused by datazone assigned to two councils 
-  filter(!(hscp2019name == "Glasgow City" & hscp2019 == "S37000035")) %>% 
-  rename(areaname = hscp2019name, code = hscp2019)
-
-saveRDS(part_dictio, paste0(geo_lookup, 'HSCPdictionary.rds'))
+# Creating dictionaries for council, health board, iz and hscp
+iz_dictio <- create_dictionary(iz2011name, iz2011, "IZ11")
+ca_dictio <- create_dictionary(ca2011name, ca2011, "CA")
+hb_dictio <- create_dictionary(hb2014name, hb2014, "HB")
+part_dictio <- create_dictionary(hscp2016name, hscp2016, "HSCP")
 
 # create scotland dictionary.
 scot_dictio <- data.frame(code = 'S00000001', areaname = "Scotland")

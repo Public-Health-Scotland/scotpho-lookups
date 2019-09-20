@@ -158,6 +158,8 @@ saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
 ###############################################.
 # reading datazone lookup  from open data platform 
 # which includes most geographies but adp and locality
+# Resource ids can be accessed in the page for the datazone 2011 lookup here:
+# https://www.opendata.nhs.scot/dataset/geography-codes-and-labels
 dz_base <- extract_data("395476ab-0720-4740-be07-ff4467141352")
 
 # Creating dz lookup
@@ -217,6 +219,8 @@ saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 ## Part 6 -Deprivation (SIMD) geographies ----
 ###############################################.
 # Joining together the extractions of each simd version. 
+# Resource ids can be accessed in the page for each SIMD version here:
+# https://www.opendata.nhs.scot/dataset/scottish-index-of-multiple-deprivation#
 data_depr_simd <- rbind(
   create_simd("a97fca71-ebbb-4897-a611-88024a76ff21", year_list = 1996:2003, 
               simd_version = 2004, dz = dz2001), #simd version 2004

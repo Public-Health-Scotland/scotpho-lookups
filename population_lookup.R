@@ -170,7 +170,9 @@ create_quintile_data <- function(group_vars, geo, quint) {
 ###############################################.
 # They are used for custom geography requests and for creating the rest of lookups
 ###############################################.
- # Datazone 2001.
+# Datazone 2001.
+# Resource ids can be accessed in the page for the datazone 2001 pop here:
+# https://www.opendata.nhs.scot/dataset/population-estimates
 dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", dz2001) %>% 
   create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
 
@@ -180,6 +182,8 @@ rm(dz01_base) #freeing up memory
 
 ###############################################.
 # Datazone 2011.
+# # Resource ids can be accessed in the page for the datazone 2011 pop here:
+# https://www.opendata.nhs.scot/dataset/population-estimates
 dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", dz2011) %>% 
   create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
 # If the previous one times out/fails try this, but the link will change every year
@@ -197,6 +201,8 @@ dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 
 ###############################################.
 # Intermediate zones, councils, health boards and HSC partnerships
+# Resource ids can be accessed in the page for the estimate pops here:
+# https://www.opendata.nhs.scot/dataset/population-estimates
 hscp_pop <- extract_open_data("c3a393ce-253b-4c75-82dc-06b1bb5638a3", hscp2016) 
 hb_pop <- extract_open_data("27a72cc8-d6d8-430c-8b4f-3109a9ceadb1", hb2014) 
 ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca2011) 

@@ -302,7 +302,7 @@ saveRDS(depr_pop_base, paste0(pop_lookup, "basefile_deprivation.rds"))
 create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages",  
            council = T, adp = T, stdrate = T, deprivation = T)
 create_pop(dz = "DZ11", lower = 60, upper = 200, name = "pop_60+", council = T)
-create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+", council = T, stdrate = T)
+create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+", council = T, stdrate = T, deprivation = T)
 create_pop(dz = "DZ11", lower = 18, upper = 200, name = "pop_18+", 
            council = T, adp = T, stdrate = T)
 create_pop(dz = "DZ11", lower = 65, upper = 200, name = "pop_65+", council = T,

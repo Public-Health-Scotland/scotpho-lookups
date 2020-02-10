@@ -83,8 +83,7 @@ extract_open_data <- function(resource_id, geography) {
 # Lower and upper are the age limits, name is the name of the output file,
 # dx is what datazone you are using, council if you want council files and
 # stdrate if you want pops used  for standarized rates
-create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
-                       deprivation = F) {
+create_pop <- function(lower, upper, name, dz) {
   
   ###############################################.
   # Creating files for percentages crude rates 
@@ -95,15 +94,13 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
   
   saveRDS(data_dz, file=paste0(pop_lookup, dz, '_', name,'.rds'))
   
-  if (council == TRUE) { # select only local authorites and above.
+   # Creating file for indicators that need council as base
     data_ca <- data_dz %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', "S11", "S37"))
     
     saveRDS(data_ca, file=paste0(pop_lookup, 'CA_', name,'.rds'))
-  }
   
   ###############################################.
   # Creating files for standardized rates
-  if (stdrate == TRUE) { # creating files for standard rates
     data_dz_sr <- readRDS(file=paste0(pop_lookup, "basefile_", dz, ".rds")) %>% 
       subset(age >= lower & age <= upper) %>% #selecting age of interest
       group_by(year, code, sex_grp, age_grp) %>% #aggregating
@@ -111,17 +108,13 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
     
     saveRDS(data_dz_sr, file=paste0(pop_lookup, dz, '_', name,'_SR.rds'))
     
-    if (council == TRUE) { # select only local authorites and above. 
-      data_ca_sr <- data_dz_sr %>% subset(substr(code,1,3) %in%  c('S00', 'S08', 'S12', "S11", "S37"))
+    # Creating file for indicators that need council as base
+    data_ca_sr <- data_dz_sr %>% subset(substr(code,1,3) %in%  c('S00', 'S08', 'S12', "S11", "S37"))
       
       saveRDS(data_ca_sr, file=paste0(pop_lookup, 'CA_', name,'_SR.rds'))
-    }
-  }
   
   ###############################################.
   # Creating files for deprivation cases
-  if (deprivation == TRUE) {
-    
     data_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
       subset(age >= lower & age <= upper) %>% #selecting age of interest
       group_by(year, code, quintile, quint_type) %>% 
@@ -129,8 +122,7 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
     
     saveRDS(data_depr, file=paste0(pop_lookup, 'depr_', name,'.rds'))
     
-    if (stdrate == TRUE) {
-      
+    # Creating files for standardized rates
       data_depr_sr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")) %>% 
         subset(age >= lower & age <= upper) %>% #selecting age of interest
         group_by(year, code, sex_grp, age_grp, quintile, quint_type) %>% 
@@ -138,8 +130,6 @@ create_pop <- function(lower, upper, name, dz, council = F, stdrate = F,
       
       saveRDS(data_depr_sr, file=paste0(pop_lookup, 'depr_', name,'_SR.rds'))
       
-    }
-  }
 }
 
 ###############################################.
@@ -165,6 +155,7 @@ dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", dz2001) %
   create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
 
 saveRDS(dz01_base, file=paste0(pop_lookup, "DZ01_pop_basefile.rds"))
+
 rm(dz01_base) #freeing up memory
 # dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds"))
 
@@ -218,10 +209,10 @@ adp_pop <- ca_pop %>%
   mutate(code =  #recoding from LA to ADP
            recode(code, 'S12000005' = 'S11000005', 'S12000006' = 'S11000006',  
                   'S12000008' = 'S11000008', 'S12000010' = 'S11000051' ,  'S12000011' ='S11000011' , 
-                  'S12000013'= 'S11000032' , 'S12000014' = 'S11000013', 'S12000015' = 'S11000014', 
+                  'S12000013'= 'S11000032' , 'S12000014' = 'S11000013', 'S12000047' = 'S11000014', 
                   'S12000017'= 'S11000016',  'S12000018'= 'S11000017',  'S12000019'= 'S11000051' , 
                   'S12000020' = 'S11000019', 'S12000021'=  'S11000020',  'S12000023'=  'S11000022',  
-                  'S12000024' = 'S11000023' , 'S12000026'= 'S11000025' ,  'S12000027' = 'S11000026', 
+                  'S12000048' = 'S11000023' , 'S12000026'= 'S11000025' ,  'S12000027' = 'S11000026', 
                   'S12000028'=  'S11000027',  'S12000029' =  'S11000052', 'S12000030' =  'S11000029', 
                   'S12000033'=  'S11000001',  'S12000034'= 'S11000002',  'S12000035' =  'S11000004',  
                   'S12000036' =  'S11000012', 'S12000038'=  'S11000024',  'S12000039'=  'S11000030' ,  
@@ -287,38 +278,33 @@ saveRDS(depr_pop_base, paste0(pop_lookup, "basefile_deprivation.rds"))
 ## Part 4 - Create population files  ----
 ###############################################.
 # DZ11, LA and deprivation
-create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages",  
-           council = T, stdrate = T, deprivation = T)
-create_pop(dz = "DZ11", lower = 60, upper = 200, name = "pop_60+", council = T)
-create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+", council = T, stdrate = T, deprivation = T)
-create_pop(dz = "DZ11", lower = 18, upper = 200, name = "pop_18+", 
-           council = T, stdrate = T)
-create_pop(dz = "DZ11", lower = 65, upper = 200, name = "pop_65+", council = T,
-           stdrate = T, deprivation = T)
+create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages")
+create_pop(dz = "DZ11", lower = 60, upper = 200, name = "pop_60+")
+create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+")
+create_pop(dz = "DZ11", lower = 18, upper = 200, name = "pop_18+")
+create_pop(dz = "DZ11", lower = 65, upper = 200, name = "pop_65+")
 create_pop(dz = "DZ11", lower = 75, upper = 200, name = "pop_75+")
 create_pop(dz = "DZ11", lower = 85, upper = 200, name = "pop_85+")
-create_pop(dz = "DZ11", lower = 12, upper = 200, name = "pop_12+", council = T)
-create_pop(dz = "DZ11", lower = 0, upper = 4, name = "pop_under5", council = T, stdrate = T)
-create_pop(dz = "DZ11", lower = 0, upper = 17, name = "pop_under18", council = T)
-create_pop(dz = "DZ11", lower = 0, upper = 15, name = "pop_under16", council = T, stdrate = T)
-create_pop(dz = "DZ11", lower = 0, upper = 25, name = "pop_under26", council = T)
-create_pop(dz = "DZ11", lower = 0, upper = 74, name = "pop_under75", council = T, 
-           stdrate = T, deprivation = T)
+create_pop(dz = "DZ11", lower = 12, upper = 200, name = "pop_12+")
+create_pop(dz = "DZ11", lower = 0, upper = 4, name = "pop_under5")
+create_pop(dz = "DZ11", lower = 0, upper = 17, name = "pop_under18")
+create_pop(dz = "DZ11", lower = 0, upper = 15, name = "pop_under16")
+create_pop(dz = "DZ11", lower = 0, upper = 25, name = "pop_under26")
+create_pop(dz = "DZ11", lower = 0, upper = 74, name = "pop_under75")
 create_pop(dz = "DZ11", lower = 0, upper = 0, name = "pop_under1")
-create_pop(dz = "DZ11", lower = 5, upper = 5, name = "pop_5", deprivation = T)
-create_pop(dz = "DZ11", lower = 11, upper = 11, name = "pop_11", deprivation = T)
-create_pop(dz = "DZ11", lower = 8, upper = 15, name = "pop_8to15", council = T)
-create_pop(dz = "DZ11", lower = 11, upper = 25, name = "pop_11to25", council = T, stdrate = T)
-create_pop(dz = "DZ11", lower = 16, upper = 39, name = "pop_16to39", council = T)
+create_pop(dz = "DZ11", lower = 5, upper = 5, name = "pop_5")
+create_pop(dz = "DZ11", lower = 11, upper = 11, name = "pop_11")
+create_pop(dz = "DZ11", lower = 8, upper = 15, name = "pop_8to15")
+create_pop(dz = "DZ11", lower = 11, upper = 25, name = "pop_11to25")
+create_pop(dz = "DZ11", lower = 16, upper = 39, name = "pop_16to39")
 create_pop(dz = "DZ11", lower = 16, upper = 64, name = "pop_16to64")
-create_pop(dz = "DZ11", lower = 40, upper = 64, name = "pop_40to64", council = T)
+create_pop(dz = "DZ11", lower = 40, upper = 64, name = "pop_40to64")
 create_pop(dz = "DZ11", lower = 65, upper = 74, name = "pop_65to74")
 create_pop(dz = "DZ11", lower = 1, upper = 4, name = "pop_1to4")
 create_pop(dz = "DZ11", lower = 5, upper = 15, name = "pop_5to15")
 create_pop(dz = "DZ11", lower = 16, upper = 25, name = "pop_16to25")
-create_pop(dz = "DZ11", lower = 15, upper = 25, name = "pop_15to25", council = T, stdrate = T)
-create_pop(dz = "DZ11", lower = 15, upper = 44, name = "pop_15to44", council = T, 
-           stdrate = T, deprivation = T)
+create_pop(dz = "DZ11", lower = 15, upper = 25, name = "pop_15to25")
+create_pop(dz = "DZ11", lower = 15, upper = 44, name = "pop_15to44")
 
 ###############################################.
 # Working age population

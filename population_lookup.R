@@ -317,7 +317,7 @@ working_pop <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) %>%
 saveRDS(working_pop, file=paste0(pop_lookup, 'DZ11_working_pop.rds'))
 
 # For CA
-working_pop <- working_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12'))
+working_pop <- working_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37'))
 saveRDS(working_pop, file=paste0(pop_lookup, 'CA_working_pop.rds'))
 
 #For deprivation cases
@@ -338,7 +338,7 @@ teenpreg_pop <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) %>%
 
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'DZ11_pop_fem15to19.rds'))
 
-teenpreg_pop <- teenpreg_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12'))
+teenpreg_pop <- teenpreg_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37'))
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'CA_pop_fem15to19.rds'))
 
 #For deprivation cases

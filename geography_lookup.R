@@ -99,10 +99,11 @@ create_dictionary <- function(area_name, area_code, filename) {
 ###############################################.
 #  This files comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
 # Check that this is the latest version available
-hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.rds")) %>% 
+hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20191216.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
-  select(datazone2011, hscplocality, hscp2019name) %>% 
-  arrange(hscplocality, hscp2019name)
+  select(data_zone2011, hscp_locality, hscp2019name) %>% 
+  arrange(hscp_locality, hscp2019name) %>% 
+  rename(datazone2011 = data_zone2011, loc_name = hscp_locality)
 
 ##Create artificial standard 9 digit code to identify unique localityfor use 
 #in matching files to generate indicator data.
@@ -110,16 +111,16 @@ hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20180903.rds
 #standard geography code for an area but these technically haven't been created for HSCPs yet.
 ##Beware some localities might have common names to those used by other HSCPs 
 #(e.g. 'East'/'West' are commonly used as locality names by more than one partnership ).
-loc_seq <- seq_len(length(unique(hscp_loc$hscplocality)))
+loc_seq <- seq_len(length(unique(hscp_loc$loc_name)))
 loc_zeros <- case_when(nchar(loc_seq) == 1 ~ "00000",
                        nchar(loc_seq) == 2 ~ "0000",
                        nchar(loc_seq) == 3 ~ "000")
 
 loc_code <- paste0("S99", loc_zeros, loc_seq)
 
-loc_code <- data.frame(hscp_locality = loc_code, hscplocality = unique(hscp_loc$hscplocality))
+loc_code <- data.frame(hscp_locality = loc_code, loc_name = unique(hscp_loc$loc_name))
 
-hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("hscplocality"))
+hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("loc_name"))
 
 saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
 
@@ -170,11 +171,11 @@ dz11_lookup <- dz_base %>%
          hscp2019 = hscp2016, hb2019 = hb2014)
 
 # merging localities
-dz11_lookup <- left_join(dz11_lookup, hscp_loc, c("datazone2011")) 
+dz11_lookup <- left_join(dz11_lookup, hscp_loc, by = "datazone2011") 
 
 # merging adps
-dz11_lookup <- left_join(dz11_lookup, adp_lookup, c("ca2019")) %>% 
-  select(-hscplocality, -hscp2019name, -adp_name)
+dz11_lookup <- left_join(dz11_lookup, adp_lookup, by = "ca2019") %>% 
+  select(-loc_name, -hscp2019name, -adp_name)
 
 saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
 
@@ -190,7 +191,7 @@ saveRDS(parent_lookup, paste0(geo_lookup, 'IZtoPartnership_parent_lookup.rds'))
 ## Part 5 - Create dictionary  to have the names and not codes ----
 ###############################################.
 # Create HSC locality dictionary.
-local_dictio <- hscp_loc %>% rename(areaname = hscplocality, code = hscp_locality) %>%
+local_dictio <- hscp_loc %>% rename(areaname = loc_name, code = hscp_locality) %>%
   select(areaname, code) %>% unique
 saveRDS(local_dictio, paste0(geo_lookup, 'HSClocalitydictionary.rds'))
 

@@ -182,11 +182,11 @@ dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 # Intermediate zones, councils, health boards and HSC partnerships
 # Resource ids can be accessed in the page for the estimate pops here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
-hscp_pop <- extract_open_data("c3a393ce-253b-4c75-82dc-06b1bb5638a3", hscp2016) 
-hb_pop <- extract_open_data("27a72cc8-d6d8-430c-8b4f-3109a9ceadb1", hb2014) 
-ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca2011) 
-iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", iz2011) 
-iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", iz2001)
+hscp_pop <- extract_open_data("c3a393ce-253b-4c75-82dc-06b1bb5638a3", hscp) 
+hb_pop <- extract_open_data("27a72cc8-d6d8-430c-8b4f-3109a9ceadb1", hb) 
+ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca) 
+iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", intzone) 
+iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", intzone)
 
 ###############################################.
 #Scotland population

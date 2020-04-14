@@ -165,10 +165,10 @@ dz_base <- extract_data("395476ab-0720-4740-be07-ff4467141352")
 
 # Creating dz lookup
 dz11_lookup <- dz_base %>% 
-  select(dz2011, iz2011, ca2011, hscp2016, hb2014) %>% 
+  select(datazone, intzone, ca, hscp, hb) %>% 
   # the variables contain a year, but they have the latest(2019) codes
-  rename(datazone2011 = dz2011, intzone2011 =iz2011, ca2019 = ca2011,
-         hscp2019 = hscp2016, hb2019 = hb2014)
+  rename(datazone2011 = datazone, intzone2011 =intzone, ca2019 = ca,
+         hscp2019 = hscp, hb2019 = hb)
 
 # merging localities
 dz11_lookup <- left_join(dz11_lookup, hscp_loc, by = "datazone2011") 

@@ -67,7 +67,8 @@ extract_open_data <- function(resource_id, geography) {
   
   # Formatting the data in the way needed
   data_extraction <- data_extraction %>%
-    filter(year > 2001 & substr({{geography}}, 1, 3) != "S92") %>% #years and no Scotland
+    filter(year > 2001 & substr({{geography}}, 1, 3) != "S92" & #years and no Scotland
+             sex %in% c("Male", "Female")) %>% #dropping "all" rows
     mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%
     select(year, sex, {{geography}}, age0:age90plus) %>%
     gather(age, pop, -c(year, sex, {{geography}})) %>% #wide to long format

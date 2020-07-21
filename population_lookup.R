@@ -152,7 +152,7 @@ create_quintile_data <- function(group_vars, geo, quint) {
 # Datazone 2001.
 # Resource ids can be accessed in the page for the datazone 2001 pop here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
-dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", dz2001) %>% 
+dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", datazone) %>% 
   create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
 
 saveRDS(dz01_base, file=paste0(pop_lookup, "DZ01_pop_basefile.rds"))
@@ -164,9 +164,9 @@ rm(dz01_base) #freeing up memory
 # Datazone 2011.
 # # Resource ids can be accessed in the page for the datazone 2011 pop here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
-dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", dz2011) %>% 
+dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", datazone) %>% 
   create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
-# If the previous one times out/fails try this, but the link will change every year
+# If the previous one times out/fails try this, but the link might change every year
 # dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_30082019.csv") %>% 
 #   filter(year > 2001 & substr(dz2011, 1, 3) != "S92") %>% #years and no Scotland
 #   mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%

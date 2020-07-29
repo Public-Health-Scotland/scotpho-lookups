@@ -51,21 +51,20 @@ extract_data <- function(resource_id) {
 ###############################################.
 #Function to create deprivation rank data set for different years 
 #and different simd versions
-create_simd <- function(resource_id, year_list, simd_version, dz) { #list_pos
+create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   
   # Creating quintile variables to keep, they vary with the version
   sc_quin_var <- paste0("simd", simd_version, "countryquintile")
-  hb_quin_var <- paste0("simd", simd_version, "hb2014quintile")
-  ca_quin_var <- paste0("simd", simd_version, "ca2011quintile")
+  hb_quin_var <- paste0("simd", simd_version, "hbquintile")
+  ca_quin_var <- paste0("simd", simd_version, "caquintile")
   
   # Extract the data, keep some variables and rename them
   data_simd <- extract_data(resource_id = resource_id) %>% 
-    select({{dz}}, ca2011, hb2014, sc_quin_var, hb_quin_var, ca_quin_var ) %>% 
-    rename(datazone = {{dz}}, ca = ca2011, hb = hb2014, sc_quin = sc_quin_var,
-           hb_quin = hb_quin_var, ca_quin = ca_quin_var)
+    select(datazone, ca, hb, sc_quin_var, hb_quin_var, ca_quin_var ) %>% 
+    rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
   
   # recode simd 2004 and 2006, as they follow an inverse scale.
-  if (simd_version %in% c(2004, 2006)) {
+  if (simd_version %in% c("2004", "2006")) {
     data_simd <- data_simd %>%
       mutate_at(vars(sc_quin, ca_quin, hb_quin),
                 ~recode(., "1" = 5, "2" = 4, "3" = 3, "4" = 2, "5" = 1))
@@ -224,15 +223,17 @@ saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 # https://www.opendata.nhs.scot/dataset/scottish-index-of-multiple-deprivation#
 data_depr_simd <- rbind(
   create_simd("a97fca71-ebbb-4897-a611-88024a76ff21", year_list = 1996:2003, 
-              simd_version = 2004, dz = dz2001), #simd version 2004
+              simd_version = "2004"), #simd version 2004
   create_simd("6f871d03-d2af-4fe2-a615-d2d2ca76c3a5", year_list = 2004:2006, 
-              simd_version = 2006, dz = dz2001), #simd version 2006
+              simd_version = "2006"), #simd version 2006
   create_simd("d9738550-4cf9-428e-8453-c2aad463ff68", year_list = 2007:2009, 
-              simd_version = 2009, dz = dz2001), #simd version 2009
+              simd_version = "2009v2"), #simd version 2009
   create_simd("dd4b13d3-066b-4714-bb1f-730e1a1ee692", year_list = 2010:2013, 
-              simd_version = 2012, dz = dz2001), #simd version 2012
-  create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2018, 
-              simd_version = 2016, dz = dz2011) #simd version 2016
+              simd_version = "2012"), #simd version 2012
+  create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
+              simd_version = "2016"), #simd version 2016
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2019, 
+              simd_version = "2020v2") #simd version 2016
 )
 
 saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))

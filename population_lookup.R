@@ -259,13 +259,13 @@ depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"
 depr_pop_base <- rbind( 
   create_quintile_data(geo = "scotland", quint = "sc_quin"),   #Scotland 
   #Health boards using national quintiles
-  create_quintile_data(geo = "hb2019", quint = "sc_quin"),
+  create_quintile_data(geo = "hb", quint = "sc_quin"),
   #Health boards using health board quintiles
-  create_quintile_data(geo = "hb2019", quint = "hb_quin"),
+  create_quintile_data(geo = "hb", quint = "hb_quin"),
   #Council area using national quintiles
-  create_quintile_data(geo = "ca2019", quint = "sc_quin"),
+  create_quintile_data(geo = "ca", quint = "sc_quin"),
   #Council area using concil quintiles
-  create_quintile_data(geo = "ca2019", quint = "ca_quin"))
+  create_quintile_data(geo = "ca", quint = "ca_quin"))
 
 depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, quint_type) %>% 
   summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 

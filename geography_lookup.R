@@ -201,10 +201,10 @@ adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
 # Creating dictionaries for council, health board, iz and hscp
-iz_dictio <- create_dictionary(iz2011name, iz2011, "IZ11")
-ca_dictio <- create_dictionary(ca2011name, ca2011, "CA")
-hb_dictio <- create_dictionary(hb2014name, hb2014, "HB")
-part_dictio <- create_dictionary(hscp2016name, hscp2016, "HSCP")
+iz_dictio <- create_dictionary(intzonename, intzone, "IZ11")
+ca_dictio <- create_dictionary(caname, ca, "CA")
+hb_dictio <- create_dictionary(hbname, hb, "HB")
+part_dictio <- create_dictionary(hscpname, hscp, "HSCP")
 
 # create scotland dictionary.
 scot_dictio <- data.frame(code = 'S00000001', areaname = "Scotland")

@@ -238,4 +238,116 @@ data_depr_simd <- rbind(
 
 saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
 
+###############################################.
+## Part 7 - Geography lookup for profiles tool ----
+###############################################.
+# Lookup with all geography codes information. This file is created in the lookup repo
+geo_lookup <- readRDS(paste0(lookups, "Geography/codedictionary.rds")) %>%
+  mutate_all(factor) %>% # converting variables into factors
+  #Creating geography type variable
+  mutate(areatype = case_when(substr(code, 1, 3) == "S00" ~ "Scotland",
+                              substr(code, 1, 3) == "S08" ~ "Health board",
+                              substr(code, 1, 3) == "S12" ~ "Council area",
+                              substr(code, 1, 3) == "S11" ~ "Alcohol & drug partnership",
+                              substr(code, 1, 3) == "S99" ~ "HSC locality",
+                              substr(code, 1, 3) == "S37" ~ "HSC partnership",
+                              substr(code, 1, 3) == "S02" ~ "Intermediate zone"),
+         #Changing ands for & to reduce issues with long labels and " - " for "-"
+         areaname = gsub(" and ", " & ", areaname),
+         areaname = gsub(" - ", "-", areaname))
+
+#Bringing parent geography information and formatting in one column with no duplicates
+geo_parents <- readRDS(paste0(lookups, "Geography/IZtoPartnership_parent_lookup.rds")) %>%
+  gather(geotype, code, c(intzone2011, hscp_locality)) %>% distinct() %>%
+  select(-geotype) %>% rename(parent_code = hscp_partnership)
+
+# Merging to geo_lookup to obtain parent area name
+geo_parents <- left_join(x=geo_parents, y=geo_lookup, by=c("parent_code" = "code")) %>%
+  select(-c(areatype)) %>% rename(parent_area = areaname)
+
+#Merging parents to geo_lookup
+geo_lookup <- left_join(x=geo_lookup, y=geo_parents, by="code", all.x = TRUE)
+
+##No IZ seem to be assigned to more than one partnership in this file.
+
+###There are a number of IZ's with the same name, recoding.
+geo_lookup %<>%
+  mutate(areaname = case_when(
+    code == "S02001938" ~ "Woodside-Glasgow City",
+    code == "S02001267" ~ "Woodside-Abeerdeen City",
+    code == "S02002233" ~ "Western Edge-Perth & Kinross",
+    code == "S02001475" ~ "Western Edge-Dundee City",
+    code == "S02001620" ~ "Tollcross-City of Edinburgh",
+    code == "S02001911" ~ "Tollcross-Glasgow City",
+    code == "S02001671" ~ "Muirhouse-City of Edinburgh",
+    code == "S02002137" ~ "Muirhouse-North Lanarkshire",
+    code == "S02002358" ~ "Law-South Lanarkshire",
+    code == "S02001469" ~ "Law-Dundee City",
+    code == "S02002490" ~ "Ladywell-West Lothian",
+    code == "S02002156" ~ "Ladywell-North Lanarkshire",
+    code == "S02001528" ~ "Hillhead-East Dunbartonshire",
+    code == "S02001953" ~ "Hillhead-Glasgow City",
+    code == "S02001249" ~ "City Centre West-Aberdeen City",
+    code == "S02001933" ~ "City Centre West-Glasgow City",
+    code == "S02001250" ~ "City Centre East-Aberdeen City",
+    code == "S02001932" ~ "City Centre East-Glasgow City",
+    code == "S02001448" ~ "City Centre-Dundee City",
+    code == "S02002449" ~ "City Centre-Stirling",
+    code == "S02001307" ~ "Blackburn-Aberdeenshire",
+    code == "S02002496" ~ "Blackburn-West Lothian",
+    code == "S02001534" ~ "IZ01-East Lothian",
+    code == "S02002460" ~ "IZ01-West Dunbartonshire",
+    code == "S02001535" ~ "IZ02-East Lothian",
+    code == "S02002461" ~ "IZ02-West Dunbartonshire",
+    code == "S02001536" ~ "IZ03-East Lothian",
+    code == "S02002462" ~ "IZ03-West Dunbartonshire",
+    code == "S02001537" ~ "IZ04-East Lothian",
+    code == "S02002463" ~ "IZ04-West Dunbartonshire",
+    code == "S02001538" ~ "IZ05-East Lothian",
+    code == "S02002464" ~ "IZ05-West Dunbartonshire",
+    code == "S02001539" ~ "IZ06-East Lothian",
+    code == "S02002465" ~ "IZ06-West Dunbartonshire",
+    code == "S02001540" ~ "IZ07-East Lothian",
+    code == "S02002466" ~ "IZ07-West Dunbartonshire",
+    code == "S02001541" ~ "IZ08-East Lothian",
+    code == "S02002467" ~ "IZ08-West Dunbartonshire",
+    code == "S02001542" ~ "IZ09-East Lothian",
+    code == "S02002468" ~ "IZ09-West Dunbartonshire",
+    code == "S02001543" ~ "IZ10-East Lothian",
+    code == "S02002469" ~ "IZ10-West Dunbartonshire",
+    code == "S02001544" ~ "IZ11-East Lothian",
+    code == "S02002470" ~ "IZ11-West Dunbartonshire",
+    code == "S02001545" ~ "IZ12-East Lothian",
+    code == "S02002471" ~ "IZ12-West Dunbartonshire",
+    code == "S02001546" ~ "IZ13-East Lothian",
+    code == "S02002472" ~ "IZ13-West Dunbartonshire",
+    code == "S02001547" ~ "IZ14-East Lothian",
+    code == "S02002473" ~ "IZ14-West Dunbartonshire",
+    code == "S02001548" ~ "IZ15-East Lothian",
+    code == "S02002474" ~ "IZ15-West Dunbartonshire",
+    code == "S02001549" ~ "IZ16-East Lothian",
+    code == "S02002475" ~ "IZ16-West Dunbartonshire",
+    code == "S02001550" ~ "IZ17-East Lothian",
+    code == "S02002476" ~ "IZ17-West Dunbartonshire",
+    code == "S02001551" ~ "IZ18-East Lothian",
+    code == "S02002477" ~ "IZ18-West Dunbartonshire",
+    TRUE  ~  paste(areaname))) #Last line for the rest of cases
+
+geo_lookup %<>%
+  #Creating variable that includeas area name and type for trend plotting
+  mutate(areaname_full = paste(areaname, "-", areatype)) %>%
+  mutate_if(is.character, factor) %>% #transforming into factors
+  select(-c(parent_code)) %>%
+  #Reducing length of the area type descriptor
+  mutate(areaname_full = ifelse(areaname == "Scotland", "Scotland",
+                                paste(areaname_full)),
+         areaname_full = gsub("Health board", "HB", areaname_full),
+         areaname_full = gsub("Council area", "CA", areaname_full),
+         areaname_full = gsub("Alcohol & drug partnership", "ADP", areaname_full),
+         areaname_full = gsub("HSC partnership", "HSCP", areaname_full),
+         areaname_full = gsub("HSC locality", "HSCL", areaname_full),
+         areaname_full = gsub("Intermediate zone", "IZ", areaname_full))
+
+saveRDS(geo_lookup, paste0(geo_lookup, "geo_lookup.rds"))
+
 ##END

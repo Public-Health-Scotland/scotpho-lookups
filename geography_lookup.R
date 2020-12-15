@@ -17,6 +17,8 @@ library(dplyr)
 library(readr)
 library(httr) # api connection
 library(jsonlite)  # transforming JSON files into dataframes
+library(tidyr)
+library(magrittr)
 
 # Varies filepaths depending on if using server or not and what organisation uses it.
 if (exists("organisation") == TRUE) { #Health Scotland
@@ -241,8 +243,7 @@ saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
 ###############################################.
 ## Part 7 - Geography lookup for profiles tool ----
 ###############################################.
-# Lookup with all geography codes information. This file is created in the lookup repo
-geo_lookup <- readRDS(paste0(lookups, "Geography/codedictionary.rds")) %>%
+opt_lookup <- readRDS(paste0(geo_lookup, "codedictionary.rds")) %>%
   mutate_all(factor) %>% # converting variables into factors
   #Creating geography type variable
   mutate(areatype = case_when(substr(code, 1, 3) == "S00" ~ "Scotland",
@@ -257,21 +258,21 @@ geo_lookup <- readRDS(paste0(lookups, "Geography/codedictionary.rds")) %>%
          areaname = gsub(" - ", "-", areaname))
 
 #Bringing parent geography information and formatting in one column with no duplicates
-geo_parents <- readRDS(paste0(lookups, "Geography/IZtoPartnership_parent_lookup.rds")) %>%
+geo_parents <- readRDS(paste0(geo_lookup, "IZtoPartnership_parent_lookup.rds")) %>%
   gather(geotype, code, c(intzone2011, hscp_locality)) %>% distinct() %>%
   select(-geotype) %>% rename(parent_code = hscp_partnership)
 
 # Merging to geo_lookup to obtain parent area name
-geo_parents <- left_join(x=geo_parents, y=geo_lookup, by=c("parent_code" = "code")) %>%
+geo_parents <- left_join(x=geo_parents, y=opt_lookup, by=c("parent_code" = "code")) %>%
   select(-c(areatype)) %>% rename(parent_area = areaname)
 
 #Merging parents to geo_lookup
-geo_lookup <- left_join(x=geo_lookup, y=geo_parents, by="code", all.x = TRUE)
+opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code", all.x = TRUE)
 
 ##No IZ seem to be assigned to more than one partnership in this file.
 
 ###There are a number of IZ's with the same name, recoding.
-geo_lookup %<>%
+opt_lookup %<>%
   mutate(areaname = case_when(
     code == "S02001938" ~ "Woodside-Glasgow City",
     code == "S02001267" ~ "Woodside-Abeerdeen City",
@@ -333,7 +334,7 @@ geo_lookup %<>%
     code == "S02002477" ~ "IZ18-West Dunbartonshire",
     TRUE  ~  paste(areaname))) #Last line for the rest of cases
 
-geo_lookup %<>%
+opt_lookup %<>%
   #Creating variable that includeas area name and type for trend plotting
   mutate(areaname_full = paste(areaname, "-", areatype)) %>%
   mutate_if(is.character, factor) %>% #transforming into factors
@@ -348,6 +349,6 @@ geo_lookup %<>%
          areaname_full = gsub("HSC locality", "HSCL", areaname_full),
          areaname_full = gsub("Intermediate zone", "IZ", areaname_full))
 
-saveRDS(geo_lookup, paste0(geo_lookup, "geo_lookup.rds"))
+saveRDS(opt_lookup, paste0(geo_lookup, "opt_geo_lookup.rds"))
 
 ##END

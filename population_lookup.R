@@ -352,4 +352,22 @@ teenpreg_pop_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")
 
 saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 
+###############################################.
+# Live births (used for infant deaths under 1)
+live_births <- readRDS("/PHI_conf/ScotPHO/Profiles/Data/Prepared Data/live_births_raw.rds")
+
+live_lookup <- readRDS(paste0(geo_lookup, "DataZone11_All_Geographies_Lookup.rds")) %>% 
+  select(datazone2011, ca2019, hb2019, hscp2019) %>% 
+  mutate(scot = "S00000001")
+
+live_births <- left_join(live_births, live_lookup, by = c("datazone" = "datazone2011"))
+
+live_births %<>% select(-datazone) %>% 
+  pivot_longer(ca2019:scot, values_to = "code") %>% select(-name) 
+
+live_births %<>% group_by(code, year) %>% 
+  summarise(denominator = sum(numerator, na.rm = T)) %>%  ungroup
+
+saveRDS(live_births, file=paste0(pop_lookup, 'live_births.rds'))
+
 ##END

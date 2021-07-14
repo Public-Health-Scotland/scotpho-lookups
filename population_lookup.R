@@ -30,6 +30,9 @@ if (exists("organisation") == TRUE) { #Health Scotland
   }
 }
 
+# Setting file permissions to anyone to allow writing/overwriting of project files
+Sys.umask("006")
+
 ###############################################.
 ## Part 1 - Functions ----
 ###############################################.

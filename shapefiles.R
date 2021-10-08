@@ -139,6 +139,51 @@ iz_bound_orig$council <- gsub(" and ", " & ", iz_bound_orig$council)
 iz_bound_orig$council <- gsub("Edinburgh", "City of Edinburgh", iz_bound_orig$council)
 iz_bound_orig$council <- gsub("Eilean Siar", "Na h-Eileanan Siar", iz_bound_orig$council)
 
+### Some IZ's only have a code for a name - they are renamed here.
+iz_bound_orig@data %<>%
+  mutate(area_name = case_when(
+    code == "S02001534" ~ "Wallyford and Whitecraig (IZ01)",
+    code == "S02001535" ~ "Musselburgh South (IZ02)",
+    code == "S02001536" ~ "Musselburgh West (IZ03)",
+    code == "S02001537" ~ "Musselburgh North (IZ04)",
+    code == "S02001538" ~ "Musselburgh East (IZ05)",
+    code == "S02001539" ~ "Pinkie Braes (IZ06)",
+    code == "S02001540" ~ "Prestonpans West (IZ07)",
+    code == "S02001541" ~ "Prestonpans East (IZ08)",
+    code == "S02001542" ~ "Cockenzie (IZ09)",
+    code == "S02001543" ~ "Tranent North (IZ10)",
+    code == "S02001544" ~ "Tranent South (IZ11)",
+    code == "S02001545" ~ "Ormiston (IZ12)",
+    code == "S02001546" ~ "Longniddry and Aberlady (IZ13)",
+    code == "S02001547" ~ "Haddington Rural (IZ14)",
+    code == "S02001548" ~ "Haddington North (IZ15)",
+    code == "S02001549" ~ "Haddington South (IZ16)",
+    code == "S02001550" ~ "Gullane and Drem (IZ17)",
+    code == "S02001551" ~ "North Berwick North (IZ18)",
+    code == "S02001552" ~ "North Berwick South (IZ19)",
+    code == "S02001553" ~ "East Linton and Rural (IZ20)",
+    code == "S02001554" ~ "Dunbar West (IZ21)",
+    code == "S02001555" ~ "Dunbar East (IZ22)",
+    code == "S02002460" ~ "Whitecrook (IZ01)",
+    code == "S02002461" ~ "Singer and Clydebank South (IZ02)",
+    code == "S02002462" ~ "Drumry (IZ03)",
+    code == "S02002463" ~ "Clydebank (IZ04)",
+    code == "S02002464" ~ "Clydebank North (IZ05)",
+    code == "S02002465" ~ "Clydebank East (IZ06)",
+    code == "S02002466" ~ "Duntocher (IZ07)",
+    code == "S02002467" ~ "Dalmuir (IZ08)",
+    code == "S02002468" ~ "Kilpatrick (IZ09)",
+    code == "S02002469" ~ "Bowling (IZ10)",
+    code == "S02002470" ~ "Dumbarton East (IZ11)",
+    code == "S02002471" ~ "Dumbarton (IZ12)",
+    code == "S02002472" ~ "Dalreoch (IZ13)",
+    code == "S02002473" ~ "Leven (IZ14)",
+    code == "S02002474" ~ "Bonhill (IZ15)",
+    code == "S02002475" ~ "Alexandria (IZ16)",
+    code == "S02002476" ~ "Balloch (IZ17)",
+    code == "S02002477" ~ "Lomond (IZ18)",
+    TRUE  ~  paste(iz_bound_orig$area_name)))
+
 saveRDS(iz_bound_orig, paste0(shapefiles, "IZ_boundary.rds"))
 
 ##END

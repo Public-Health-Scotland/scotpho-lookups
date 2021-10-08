@@ -13,6 +13,7 @@ library(dplyr)
 library(tidyr) # long to wide format
 library(httr) # api connection
 library(jsonlite)  # transforming JSON files into dataframes
+library(readr)
 
 # Varies filepaths depending on if using server or not and what organisation uses it.
 if (exists("organisation") == TRUE) { #Health Scotland
@@ -71,8 +72,8 @@ extract_open_data <- function(resource_id, geography) {
   # Formatting the data in the way needed
   data_extraction <- data_extraction %>%
     filter(year > 2001 & substr({{geography}}, 1, 3) != "S92" & #years and no Scotland
-             sex %in% c("Male", "Female")) %>% #dropping "all" rows
-    mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%
+             sex %in% c("Male", "Female", "f", "m")) %>% #dropping "all" rows
+    mutate(sex = recode(sex, "Male" = 1, "Female" = 2, "f" = 2, "m" = 1)) %>%
     select(year, sex, {{geography}}, age0:age90plus) %>%
     gather(age, pop, -c(year, sex, {{geography}})) %>% #wide to long format
     mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
@@ -167,17 +168,19 @@ rm(dz01_base) #freeing up memory
 # Datazone 2011.
 # # Resource ids can be accessed in the page for the datazone 2011 pop here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
+# This is slower and fails more than the second method
 dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", datazone) %>% 
   create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
 # If the previous one times out/fails try this, but the link might change every year
-# dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_30082019.csv") %>% 
-#   filter(year > 2001 & substr(dz2011, 1, 3) != "S92") %>% #years and no Scotland
-#   mutate(sex = recode(sex, "Male" = 1, "Female" = 2)) %>%
-#   select(year, sex, dz2011, age0:age90plus) %>%
-#   gather(age, pop, -c(year, sex, dz2011)) %>% #wide to long format
-#   mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
-#   create_agegroups()  %>% 
-#   rename(sex_grp = sex, denominator = pop, datazone2011 =code)
+dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_07092021.csv") %>%
+  setNames(tolower(names(.))) %>%   #variables to lower case
+  filter(year > 2001 & substr(datazone, 1, 3) != "S92" & sex != "All") %>% #years and no Scotland
+  mutate(sex = recode(sex, "Male" = 1, "Female" = 2, "f" = 2, "m" = 1)) %>%
+  select(year, sex, datazone, age0:age90plus) %>%
+  gather(age, pop, -c(year, sex, datazone)) %>% #wide to long format
+  mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
+  create_agegroups()  %>%
+  rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
 
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
@@ -277,6 +280,7 @@ depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, qui
 depr_pop_base <- rbind(depr_pop_base, depr_totals)
 
 saveRDS(depr_pop_base, paste0(pop_lookup, "basefile_deprivation.rds"))
+rm(depr_pop_base)
 
 ###############################################.
 ## Part 4 - Create population files  ----

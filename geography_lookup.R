@@ -100,11 +100,11 @@ create_dictionary <- function(area_name, area_code, filename) {
 ###############################################.
 #  This files comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
 # Check that this is the latest version available
-hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20191216.rds")) %>% 
+hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20200825.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
-  select(data_zone2011, hscp_locality, hscp2019name) %>% 
+  select(datazone2011, hscp_locality, hscp2019name) %>% 
   arrange(hscp_locality, hscp2019name) %>% 
-  rename(datazone2011 = data_zone2011, loc_name = hscp_locality)
+  rename(loc_name = hscp_locality)
 
 ##Create artificial standard 9 digit code to identify unique localityfor use 
 #in matching files to generate indicator data.
@@ -234,7 +234,7 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2019, 
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2020, 
               simd_version = "2020v2") #simd version 2016
 )
 

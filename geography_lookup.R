@@ -98,13 +98,24 @@ create_dictionary <- function(area_name, area_code, filename) {
 ###############################################.
 ## Part 1 - HSC locality lookup ----
 ###############################################.
-#  This files comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
-# Check that this is the latest version available
+# This file comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
+# Check that this is the latest version available.
+# IMPORTANT: if using an updated lookup, check that the location names have not changed, 
+# as any changes could cause different 9 digit code to be allocated in the next section.
 hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20200825.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
-  select(datazone2011, hscp_locality, hscp2019name) %>% 
-  arrange(hscp_locality, hscp2019name) %>% 
+  select(datazone2011, hscp_locality, hscp2019name) 
+
+# Update November 2021: in the latest update of the lookup, 'Renfrewshire North West 
+# and South' has been updated to 'West Renfrewshire' - this needs to be renamed 
+# so that the alphabetical order of localities is the same and it is given the 
+# same 9 digit code as usual.
+hscp_loc %<>% 
+  mutate(hscp_locality = case_when(hscp_locality == "West Renfrewshire" ~ "Renfrewshire West",
+                            TRUE  ~  paste(hscp_locality))) %>%
+  arrange(hscp_locality, hscp2019name) %>%
   rename(loc_name = hscp_locality)
+
 
 ##Create artificial standard 9 digit code to identify unique localityfor use 
 #in matching files to generate indicator data.

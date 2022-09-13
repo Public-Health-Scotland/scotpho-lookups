@@ -102,9 +102,13 @@ create_dictionary <- function(area_name, area_code, filename) {
 # Check that this is the latest version available.
 # IMPORTANT: if using an updated lookup, check that the location names have not changed, 
 # as any changes could cause different 9 digit code to be allocated in the next section.
-hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20200825.rds")) %>% 
+hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20220630.rds")) %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(datazone2011, hscp_locality, hscp2019name) 
+
+
+
+
 
 # Update November 2021: in the latest update of the lookup, 'Renfrewshire North West 
 # and South' has been updated to 'West Renfrewshire' - this needs to be renamed 
@@ -245,7 +249,7 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2020, 
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2021, 
               simd_version = "2020v2") #simd version 2016
 )
 

@@ -362,12 +362,15 @@ saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 ###############################################.
 # Live births (used for infant deaths under 1)
 live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Received Data/",
-                                 "Births 2002-2020 datazone_2011.xlsx")) %>%
+                                 "Births 2002-2021 datazone_2011.xlsx")) %>%
   janitor::clean_names() %>% 
   rename(datazone = datazone_2011, year = registration_year) %>% 
   group_by(year, datazone) %>% 
   summarise(denominator = sum(count, na.rm = T)) %>% ungroup
   
+
+
+
 live_lookup <- readRDS(paste0(geo_lookup, "DataZone11_All_Geographies_Lookup.rds")) %>% 
   select(datazone2011, ca2019, hb2019, hscp2019) %>% 
   mutate(scot = "S00000001")

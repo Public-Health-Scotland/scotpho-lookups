@@ -249,7 +249,7 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2021, 
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2022, 
               simd_version = "2020v2") #simd version 2016
 )
 

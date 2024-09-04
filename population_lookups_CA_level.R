@@ -1,6 +1,6 @@
-##################################
-# Analyst notes ---
-##################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### 1. Analyst notes ----
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # This script creates population lookups using council area (CA) population estimates
 # NRS typically release CA estimates first, and then small area population estimates (SAPE) a few months later
@@ -9,32 +9,39 @@
 
 # This allows a number of indicators to be updated where population estimates are used as the denominator,
 # and where they are not released at intermediate zone or locality level (i.e. dependent on SAPEs)
+# This is because we have different types of population lookups 
+# (i.e. datazone level lookups for calculating all areatypes including HSC localities and IZs
+# and higher geography level lookups containing only CA/HB/ADP/HSCP/Scotland)
 
-# Indicators which can be updated (with name of lookup file required to carry out update):-
-
-# COPD incidence - CA_pop_16_SR+
-# COPD deaths - CA_pop_16+_SR
-# Alcohol-related hospital admissions , aged 11-25 years - CA_pop_11to25_SR
-# Children hospitalised due to asthma, aged 11-25 years - CA_pop_under16_SR
-# Deaths from suicide, female - CA_pop_allages_SR
-# Deaths from suicide, male - CA_pop_allages_SR
-# Deaths from suicide, aged 11-25 years - CA_pop_11to25
-# drug related hospital admissions - CA_pop_11to25_SR
-# Drug-related hospital admissions - CA_pop_allages_SR
-# Lung cancer deaths - CA_pop_16+_SR
-# Lung cancer registrations - CA_pop_16+_SR
-# Unintentional unjuries inunder 5s – CA_pop_under5_SR
-# Young people admitted to hospital due to assault - CA_pop_15to25_SR
-# Drug-related deaths, all - CA_pop_all_ages_R
-# Drug-related deaths, females - CA_pop_allages_SR
-# Drug-related deaths, males - CA_pop_allages_SR
-# Smoking Attributable admissions – CA_pop_all_ages_SR
-# Smoking Attrbutable deaths – CA_pop_all_ages_SR
+# there are therefore a number of indicators where the population lookup passed to the analysis functions are those higher geo level lookups:
 
 
-########################################################
+# Indicators which can be updated prior to release of SAPEs:-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# COPD incidence
+# COPD deaths
+# Alcohol-related hospital admissions , aged 11-25 years
+# Children hospitalised due to asthma, aged 11-25 years
+# Deaths from suicide, female
+# Deaths from suicide, male
+# Deaths from suicide, aged 11-25 years
+# drug related hospital admissions
+# Drug-related hospital admissions
+# Lung cancer deaths
+# Lung cancer registrations
+# Unintentional unjuries inunder 5s
+# Young people admitted to hospital due to assault
+# Drug-related deaths, all
+# Drug-related deaths, females
+# Drug-related deaths, males
+# Smoking Attributable admissions
+# Smoking Attrbutable deaths
+
+
+
 # Lookups which need updated to update these indicators:
-########################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # CA_pop_allages_SR 
 # CA_pop_16+_SR
@@ -45,39 +52,37 @@
 # CA_pop_under5_SR
 
 
-########################
-# packages
-#########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# 2. Housekeeping ----
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+
+## packages ----
 library(dplyr)
 library(tidyr)
 
-
-########################
-# filepaths
-########################
+## filepaths ----
 cl_out <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #cl-out folderwith new 2022 estimates
 scotpho_lookups_folder <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/" # scotpho folder where geography and population lookups are saved
 
 
-##########################
-# Lookups 
-###########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 3. Lookups ----
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# geography lookup 
+## geography lookup 
 geo_lookup<- readRDS(paste0(scotpho_lookups_folder, "Geography/DataZone11_All_Geographies_Lookup.rds")) |>
   select(ca2019, hscp2019, hb2019, adp) |>
   unique()
 
-# new council area population estimates
+## new council area population estimates
 CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2022.rds")) |>
   filter(year >= 2002)
 
 
 
-###################################################################
-# Functions
-###################################################################
-
+# ~~~~~~~~~~~~~~~~~~~~~~
+### 3. Functions ----
+# ~~~~~~~~~~~~~~~~~~~~~~~
 
 # function to create SR population lookups for different age groups
 create_population_lookup <- function(lower_age, upper_age, basefile = CA_estimates_raw, geography_lookup = geo_lookup){
@@ -143,9 +148,9 @@ dq_check <- function(old_file, new_data){
 }
 
 
-####################################
-# Create population lookups 
-###################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 4.  Create population lookups ----
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pop_all_ages <- create_population_lookup(lower_age = 0, upper_age = 90)
 pop_16_plus <- create_population_lookup(lower_age = 16, upper_age = 90)
@@ -155,9 +160,9 @@ pop_under_5 <- create_population_lookup(lower_age = 0, upper_age = 4)
 pop_15_to_25 <- create_population_lookup(lower_age = 15, upper_age = 25)
 
 
-########################################################
-# Check historic data against old lookups before saving 
-########################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 5. Check historic data against old lookups  ----
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pop_all_ages_check <- dq_check(new_data = pop_all_ages, old_file = "CA_pop_allages_SR")
 pop_16_plus_check <- dq_check(new_data = pop_16_plus, old_file = "CA_pop_16+_SR")
@@ -171,9 +176,9 @@ pop_15_to_25_check <- dq_check(new_data = pop_15_to_25, old_file = "CA_pop_15to2
 rm(pop_all_ages_check, pop_16_plus_check, pop_11_to_25_check, pop_under_16_check, pop_under_5_check, pop_15_to_25_check)
 
 
-###############################################
-# save new lookups in temporary folder 
-##############################################
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 6. save new lookups in temporary folder ---
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 saveRDS(pop_all_ages, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_allages_SR.rds"))
 saveRDS(pop_16_plus, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_16+_SR.rds"))
 saveRDS(pop_11_to_25, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_11to25_SR.rds"))
@@ -181,10 +186,9 @@ saveRDS(pop_under_16, paste0(scotpho_lookups_folder, "Population_workaround/CA_p
 saveRDS(pop_under_5, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_under5_SR.rds"))
 saveRDS(pop_15_to_25, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_15to25_SR.rds"))
 
-###########################
-# create backups of old files 
-###########################
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 7. create backups of old files ---
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # note: save the old files from the Population lookup folder into the 'backups' subfolder, then move these files
 # across to the population folder so they are ready to be used within the indicator analysis functions.

@@ -19,6 +19,7 @@
 # Indicators which can be updated prior to release of SAPEs:-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# (these ones we can extract the data ourselves)
 # COPD incidence
 # COPD deaths
 # Alcohol-related hospital admissions , aged 11-25 years
@@ -26,27 +27,53 @@
 # Deaths from suicide, female
 # Deaths from suicide, male
 # Deaths from suicide, aged 11-25 years
+# Deaths in children, aged 1-15
 # drug related hospital admissions
 # Drug-related hospital admissions
 # Lung cancer deaths
 # Lung cancer registrations
 # Unintentional unjuries inunder 5s
 # Young people admitted to hospital due to assault
-# Drug-related deaths, all
+
+# (these ones require data requests)
+# Drug-related deaths
 # Drug-related deaths, females
 # Drug-related deaths, males
 # Smoking Attributable admissions
 # Smoking Attrbutable deaths
+# Availability of smoking cessation products
+# Personal licences in force
+# Premise licences in force - Off trade
+# Premise licences in force - On trade
+# Premise licences in force - Total
+
+
+
+# (these ones we save ourselves from publications)
+# Child protection with parental alcohol misuse
+# Child protection with parental drug misuse
+# Child protection with parental drug or alcohol misuse
+# Children looked after by local authority
+# Children on the child protection register
+# Children referred to the Children's Reporter for care and protection
+# Children referred to the Children's Reporter for offences
+# Primary school children
+# Secondary school children
+
 
 
 
 # Lookups which need updated to update these indicators:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# note: versions ending in _SR contain age and sex splits for calculating standardised rates
 
 # CA_pop_allages_SR 
 # CA_pop_16+_SR
 # CA_pop_11to25_SR
-# CA_pop_11to25 (version used for crude rates)
+# CA_pop_11to25
+# CA_pop_12+
+# CA_pop_under18 
+# CA_pop_1to15
 # CA_pop_under16_SR
 # CA_pop_15to25_SR
 # CA_pop_under5_SR
@@ -81,17 +108,18 @@ CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2022.rds")) |>
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~
-### 3. Functions ----
+### 4. Functions ----
 # ~~~~~~~~~~~~~~~~~~~~~~~
 
-# function to create SR population lookups for different age groups
-create_population_lookup <- function(lower_age, upper_age, basefile = CA_estimates_raw, geography_lookup = geo_lookup){
+# function to create population lookups for different age groups
+create_population_lookups <- function(lower_age, upper_age, basefile = CA_estimates_raw, geography_lookup = geo_lookup, name){
   
   # step 1: filter by age
   # note this needs to be done first before creating age group column 
   # so that for example, if trying to create a population 16+ file, the age 15 is removed from the '15-19' grouping
   CA_estimates <- basefile |>
     filter(age >= lower_age & age <= upper_age)
+  
   
   # step 2: create age group column required for calculating standardised rates
   CA_estimates <- CA_estimates |>
@@ -106,92 +134,109 @@ create_population_lookup <- function(lower_age, upper_age, basefile = CA_estimat
     ))
   
   
-  # step 3: select required columns
-  CA_estimates <- CA_estimates |>
-    select(year, ca2019, sex, age_grp, pop)
-  
-  
-  # step 4: attach other geography levels (HB, ADP, HSCP, Scotland)
+  # step 3: attach other geography levels (HB, ADP, HSCP, Scotland)
   CA_estimates <- CA_estimates |>
     left_join(geography_lookup, by = "ca2019") |>
     mutate(Scotland = "S00000001")
   
   
-  # step 5: pivot the data longer to create a geography code column
-  # and sum the population estimates for each geography code
+  # step 4: pivot the data longer to create a geography code column
   CA_estimates <- CA_estimates |>
     pivot_longer(cols = c(ca2019, hscp2019, hb2019, adp, Scotland),
                  names_to = "area_type",
-                 values_to = "code") |>
-    group_by(age_grp, sex, year, code) |>
-    summarize(pop = sum(pop), .groups = 'drop')
+                 values_to = "code")
   
-  # step 6: rename columns as required to be used in scotpho analysis functions
-  CA_estimates <- CA_estimates |>
-    rename(denominator = pop,
-           sex_grp = sex)
+  # step 5: sum the population estimates for each geography
   
-  return(CA_estimates)
+  # a. population estimates by geography and year only
+  # for calculating crude rates
+  CR_CA_estimates <- CA_estimates |>
+    group_by(year, code) |>
+    summarize(denominator = sum(pop), .groups = 'drop')
   
+  # b. population estimates by geography, year, age and sex
+  # for calculating standardised rates
+  SR_CA_estimates <- CA_estimates |>
+    rename(sex_grp = sex) |>
+    group_by(year, code, age_grp, sex_grp) |>
+    summarize(denominator = sum(pop), .groups = 'drop')
+  
+  
+  # step 6: save the lookups in a temporary sub-folder
+  saveRDS(CR_CA_estimates, file=paste0(scotpho_lookups_folder, 'Population/Temporary/CA_pop_', name,'.rds'))
+  saveRDS(SR_CA_estimates, file=paste0(scotpho_lookups_folder, 'Population/Temporary/CA_pop_', name,'_SR.rds'))
 }
 
 
 
-# function to check the historic data in the newly createed lookup against the old lookup saved in the scotpho folder
-dq_check <- function(old_file, new_data){
+
+# function to check the historic data in the newly created lookup against the old lookup saved in the scotpho folder
+dq_check <- function(filename){
   
-  old_estimates <- readRDS(paste0(scotpho_lookups_folder, "Population/", old_file, ".rds"))
   
-  check <- left_join(old_estimates, new_data, by = c("year", "sex_grp", "age_grp", "code")) |>
+  old_file <- readRDS(paste0(scotpho_lookups_folder, "Population/", filename, ".rds")) # read in old file 
+  new_file <- readRDS(paste0(scotpho_lookups_folder, "Population/Temporary/", filename, ".rds")) # read in new file 
+  
+  # columns to join new and old datasets on 
+  join_cols = c("year", "code")
+  
+  # also join on age and sex columns if it's an SR file 
+  if(grepl("SR", filename)){
+    join_cols <- c(join_cols, "sex_grp", "age_grp")
+  }
+  
+  # join files and check 
+  check <- left_join(old_file, new_file, by = join_cols) |>
     mutate(number_diff = denominator.x - denominator.y,
            percent_diff = (number_diff/denominator.x) * 100)
+  
+  
+  rm(old_file, new_file)
+  
+  return(check)
 }
 
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 4.  Create population lookups ----
+# 5.  Create population lookups ----
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pop_all_ages <- create_population_lookup(lower_age = 0, upper_age = 90)
-pop_16_plus <- create_population_lookup(lower_age = 16, upper_age = 90)
-pop_11_to_25 <- create_population_lookup(lower_age = 11, upper_age = 25)
-pop_under_16 <- create_population_lookup(lower_age = 0, upper_age = 15)
-pop_under_5 <- create_population_lookup(lower_age = 0, upper_age = 4)
-pop_15_to_25 <- create_population_lookup(lower_age = 15, upper_age = 25)
+create_population_lookups(lower_age = 0, upper_age = 90, name = "allages")
+create_population_lookups(lower_age = 16, upper_age = 90, name = "16+")
+create_population_lookups(lower_age = 11, upper_age = 25, name = "11to25")
+create_population_lookups(lower_age = 0, upper_age = 15, name = "under16")
+create_population_lookups(lower_age = 0, upper_age = 4, name = "under5")
+create_population_lookups(lower_age = 15, upper_age = 25, name = "15to25")
+create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
+create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
+create_population_lookups(lower_age = 0, upper_age = 17, name = "1to15")
+create_population_lookups(lower_age = 12, upper_age = 90, name = "12+")
+
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 5. Check historic data against old lookups  ----
+# 6. Check historic data against old lookups  ----
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pop_all_ages_check <- dq_check(new_data = pop_all_ages, old_file = "CA_pop_allages_SR")
-pop_16_plus_check <- dq_check(new_data = pop_16_plus, old_file = "CA_pop_16+_SR")
-pop_11_to_25_check <- dq_check(new_data = pop_11_to_25, old_file = "CA_pop_11to25_SR")
-pop_under_16_check <-  dq_check(new_data = pop_under_16, old_file = "CA_pop_under16_SR")
-pop_under_5_check <-  dq_check(new_data = pop_under_5, old_file = "CA_pop_under5_SR")
-pop_15_to_25_check <- dq_check(new_data = pop_15_to_25, old_file = "CA_pop_15to25_SR")
+# choosing a few new lookups and checking against the old lookup before archiving them 
+# some historic changes between 2012 - 2021
+# everything pre 2012 an exact matc
 
-
-# remove checks from global env
-rm(pop_all_ages_check, pop_16_plus_check, pop_11_to_25_check, pop_under_16_check, pop_under_5_check, pop_15_to_25_check)
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 6. save new lookups in temporary folder ---
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-saveRDS(pop_all_ages, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_allages_SR.rds"))
-saveRDS(pop_16_plus, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_16+_SR.rds"))
-saveRDS(pop_11_to_25, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_11to25_SR.rds"))
-saveRDS(pop_under_16, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_under16_SR.rds"))
-saveRDS(pop_under_5, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_under5_SR.rds"))
-saveRDS(pop_15_to_25, paste0(scotpho_lookups_folder, "Population_workaround/CA_pop_15to25_SR.rds"))
+#check <- dq_check("CA_pop_allages_SR")
+#check <- dq_check("CA_pop_allages")
+#check <- dq_check("CA_pop_16+_SR")
+#check <- dq_check("CA_pop_16+")
+#check <- dq_check("CA_pop_16+")
+#check <- dq_check("CA_pop_11to25_SR")
+#check <- dq_check("CA_pop_11to25")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 7. create backups of old files ---
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # note: save the old files from the Population lookup folder into the 'backups' subfolder, then move these files
-# across to the population folder so they are ready to be used within the indicator analysis functions.
+# across to the population folder after checking they are ok so they are ready to be used within the indicator analysis functions.
 
 
 

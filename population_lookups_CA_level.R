@@ -23,7 +23,7 @@
 # COPD incidence
 # COPD deaths
 # Alcohol-related hospital admissions , aged 11-25 years
-# Children hospitalised due to asthma, aged 11-25 years
+# Children hospitalised due to asthma, aged 0-15 years
 # Deaths from suicide, female
 # Deaths from suicide, male
 # Deaths from suicide, aged 11-25 years
@@ -208,7 +208,6 @@ create_population_lookups(lower_age = 11, upper_age = 25, name = "11to25")
 create_population_lookups(lower_age = 0, upper_age = 15, name = "under16")
 create_population_lookups(lower_age = 0, upper_age = 4, name = "under5")
 create_population_lookups(lower_age = 15, upper_age = 25, name = "15to25")
-create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
 create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
 create_population_lookups(lower_age = 0, upper_age = 17, name = "1to15")
 create_population_lookups(lower_age = 12, upper_age = 90, name = "12+")

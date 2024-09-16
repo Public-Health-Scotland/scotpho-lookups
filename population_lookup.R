@@ -169,8 +169,10 @@ rm(dz01_base) #freeing up memory
 # # Resource ids can be accessed in the page for the datazone 2011 pop here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
 # This is slower and fails more than the second method
-dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", datazone) %>% 
-  create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
+# dz11_base <- extract_open_data("c505f490-c201-44bd-abd1-1bd7a64285ee", datazone) %>% 
+#   create_agegroups()  %>% rename(denominator = pop, datazone2011 =code)
+
+# Alternative code chunk (the function to open files and manipulation direct from API doesn't like running in posit ?too memory intensive?)
 # If the previous one times out/fails try this, but the link might change every year
 dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_07092021.csv") %>%
   setNames(tolower(names(.))) %>%   #variables to lower case
@@ -182,8 +184,18 @@ dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-
   create_agegroups()  %>%
   rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
 
+##temporary fix for delayed 2022 SAPE 
+#recycle 2021 populations as if they were the new 2022 populations - this will need to be revised & reupdated once actual SAPE 2022 are released
+dz11_base_2021 <- dz11_base |>
+  filter(year==2021) |>
+  mutate(year=2022)
+
+dz11_base <-rbind(dz11_base,dz11_base_2021)
+rm(dz11_base_2021)
+ 
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
+
 
 ###############################################.
 # Intermediate zones, councils, health boards and HSC partnerships
@@ -192,8 +204,16 @@ dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 hscp_pop <- extract_open_data("c3a393ce-253b-4c75-82dc-06b1bb5638a3", hscp) 
 hb_pop <- extract_open_data("27a72cc8-d6d8-430c-8b4f-3109a9ceadb1", hb) 
 ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca) 
-iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", intzone) 
 iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", intzone)
+
+iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", intzone) 
+#temporary fix for delayed 2022 SAPE 
+#recycle 2021 populations as if they were the new 2022 populations - this will need to be revised & reupdated once actual SAPE 2022 are released
+iz11_pop_2021  <- iz11_pop|>
+  filter(year==2021) |>
+  mutate(year=2022)
+iz11_pop <-rbind(iz11_pop,iz11_pop_2021)
+rm(iz11_pop_2021)
 
 ###############################################.
 #Scotland population

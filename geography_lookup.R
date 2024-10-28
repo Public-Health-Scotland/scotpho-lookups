@@ -20,18 +20,9 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(tidyr)
 library(magrittr)
 
-# Varies filepaths depending on if using server or not and what organisation uses it.
-if (exists("organisation") == TRUE) { #Health Scotland
-  if (organisation == "HS") { 
-    geo_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Geography/"
-  }
-} else  { #ISD, first server then desktop
-  if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
-    geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-  } else  {
-    geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
-  }
-}
+# path to geography lookups folder
+geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
+
 
 ###############################################.
 ## Functions ----
@@ -62,7 +53,7 @@ create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   
   # Extract the data, keep some variables and rename them
   data_simd <- extract_data(resource_id = resource_id) %>% 
-    select(datazone, ca, hb, sc_quin_var, hb_quin_var, ca_quin_var ) %>% 
+    select(datazone, ca, hb, all_of(sc_quin_var), all_of(hb_quin_var), all_of(ca_quin_var)) %>% 
     rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
   
   # recode simd 2004 and 2006, as they follow an inverse scale.
@@ -249,7 +240,7 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2022, 
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2023, 
               simd_version = "2020v2") #simd version 2016
 )
 

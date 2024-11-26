@@ -178,12 +178,12 @@ dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-
   rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
 
 ##temporary fix for delayed 2022 SAPE 
-#recycle 2021 populations as if they were the new 2022 populations - this will need to be revised & reupdated once actual SAPE 2022 are released
-dz11_base_2021 <- dz11_base |>
-  filter(year==2021) |>
-  mutate(year=2022)
+#recycle 2022 populations as if they were the new 2023 populations -
+dz11_base_2022 <- dz11_base |>
+  filter(year==2022) |> # filter for latest year
+  mutate(year=2023) # mutate latest year so that it will appear as 2023 
 
-dz11_base <-rbind(dz11_base,dz11_base_2021)
+dz11_base <-rbind(dz11_base,dz11_base_2022)
 rm(dz11_base_2021)
  
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))

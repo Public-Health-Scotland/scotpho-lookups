@@ -1,8 +1,20 @@
-##This script creates  geography lookup files, one for SIMD-deprivation and one
-#that contains all datazone 2011 and which HSCP Locality they map to.
-##This is a manual process carried out by ScotPHO until H&SCP localities have standard 
-# geographic codes and are added to ISD GPD lookup files.
-##The source of the locality lookup was Ana Rodriguez from ISD LIST team.
+# Geography_lookup.R ----
+
+# This script creates a number of geography lookup files required for both the profiles indicator updates and profiles tool itself.
+# In short the files created in this script map 2011 datazones to all the various larger geographies as well as SIMD deprivation quintiles.
+# This script also produces dictionaries that match geography codes with their corresponding geography names.
+# 
+# 1- production of population lookups used by profiles indicator updates
+# 2- production of profiles tool indicator updates
+# 3- production of SIMD split for indicators
+# 4- use within scotpho profiles tool determining hierarchy of geographies 
+
+
+# All geographies (with the exception of HSC Locality) exist on the GSS geography register
+# https://www.nrscotland.gov.uk/files/geography/Policy/standard-names-codes-background-info.pdf
+# The format of a standard geography code is
+# S XX XXXXXX  'Country', 'Entity' (ie type of geography), 'Instance' (ie specific geography)
+
 
 #Part 1 - HSC locality lookup.
 #Part 2 - ADP lookup
@@ -10,6 +22,8 @@
 #Part 4 - Parent geography for IZ and locality
 #Part 5 - Create dictionary  to have the names and not codes.
 #Part 6 - Deprivation (SIMD) geographies
+
+
 ###############################################.
 ## Packages and filepaths ----
 ###############################################.
@@ -87,46 +101,98 @@ create_dictionary <- function(area_name, area_code, filename) {
 }
 
 ###############################################.
-## Part 1 - HSC locality lookup ----
+## Part 1 - DZ to HSC locality lookup ----
 ###############################################.
-# This file comes from /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
-# Check that this is the latest version available.
-# IMPORTANT: if using an updated lookup, check that the location names have not changed, 
-# as any changes could cause different 9 digit code to be allocated in the next section.
-hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20220630.rds")) %>% 
+# Source the datazone to HSCP locality lookup created by LIST and maintained in cl-out look-ups folder 
+# /conf/linkage/output/lookups/Unicode/Geography/HSCP Locality"
+# Confirm this is the latest version available of the lookup available (PIAs in LIST team are a good contact to establish if its the latest).
+
+# Open latest DZ to HSCP locality lookup
+hscp_loc <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/HSCP Locality/HSCP Localities_DZ11_Lookup_20240513.rds') %>% 
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(datazone2011, hscp_locality, hscp2019name) 
 
 
 
 
+# When updating the locality lookup its generally a good idea to check what changes may have taken place between lookups as this can help with 
+# explaining where/when indicator data might be different. The optional code below can help study differences but isn't essential to run.
 
-# Update November 2021: in the latest update of the lookup, 'Renfrewshire North West 
-# and South' has been updated to 'West Renfrewshire' - this needs to be renamed 
-# so that the alphabetical order of localities is the same and it is given the 
-# same 9 digit code as usual.
+# Changes introduced with lookup 20230804 ----
+# New HSCP : Moray now 4 HSCP localities (replaced moray east/moray west with 4 new localities)
+
+# Changes introduced with lookup  20240513 ----
+# South Ayshire HSCP - 6 localities before and after the change but the names have updated and there are some changes to dz allocated 
+# Inverclyde - used to be 3 localities but reducing to two (central inverclyde gone and split between east and west inverclyde looks like majority of dz go to west)
+
+
+
+#############################################################################################.
+## Optional code that helps determine differences between lookup versions
+#
+## 2022 lookup
+# hscpl_2022 <- readRDS(/conf/linkage/output/lookups/Unicode/Geography/HSCP Locality/Archive/HSCP Localities_DZ11_Lookup_20220630.rds') %>% 
+#   setNames(tolower(names(.))) %>%  #variables to lower case
+#   select(datazone2011, hscp_locality, hscp2019name) 
+# 
+# loc_2022 <-hscpl_2022 %>%
+#   group_by(hscp2019name, hscp_locality) |>
+#   summarise(count_2022=n()) |>
+#   ungroup()
+#
+## 2023 lookup
+# hscpl_2023 <-  readRDS('/conf/linkage/output/lookups/Unicode/Geography/HSCP Locality/Archive/HSCP Localities_DZ11_Lookup_20230804.rds') %>% 
+#   setNames(tolower(names(.))) %>%  #variables to lower case
+#   select(datazone2011, hscp_locality, hscp2019name) 
+# 
+# loc_2023 <-hscpl_2023 %>%
+#   group_by(hscp2019name, hscp_locality) |>
+#   summarise(count_2023=n()) |>
+#   ungroup()
+# 
+## 2024 lookup
+# hscp_loc_2024 <-hscp_loc %>%
+#   group_by(hscp2019name, hscp_locality) |>
+#   summarise(count_2024=n()) |>
+#   ungroup()
+#
+## joining old lookups enable you to see which territories are changing
+## Studying the columns where NA appear in the files below helps you check which localities existed in which lookups
+# joined <-full_join(loc_2022,loc_2023)
+# joined2 <-full_join(joined,hscp_loc_2024)
+
+
+# sort by locality name then partnership 
 hscp_loc %<>% 
-  mutate(hscp_locality = case_when(hscp_locality == "West Renfrewshire" ~ "Renfrewshire West",
-                            TRUE  ~  paste(hscp_locality))) %>%
   arrange(hscp_locality, hscp2019name) %>%
   rename(loc_name = hscp_locality)
 
 
-##Create artificial standard 9 digit code to identify unique localityfor use 
-#in matching files to generate indicator data.
-##ScotPHO programs are set up to expect a field called "code" which contains the 
-#standard geography code for an area but these technically haven't been created for HSCPs yet.
+## Generate GSS geography code ----
+# Create artificial standard 9 digit code to identify unique hscp locality
+# GSS (government statistical service) codes do not exist for HSCP localities as these are not official geographies
+# They are deemed too unstable to warrant creation of official numbering but ScotPHO profiles tool uses them to ease data processing
+# so we must create them. 
+
 ##Beware some localities might have common names to those used by other HSCPs 
 #(e.g. 'East'/'West' are commonly used as locality names by more than one partnership ).
-loc_seq <- seq_len(length(unique(hscp_loc$loc_name)))
+# These should be removed/handled by GPD team when preparing the lookup in cl-out but worth
+# being aware this is a possibility.
+
+# create a sequential number (the starting number of this sequential number can be adjusted to ensure we don't recycle the same code)
+# Each time the geography lookup codes for localities is run there is a risk we could apply a different code to a locality if there have been changes to the number or names of
+# the localities (even if there are the same number of localities a change in spelling can impact on the sort order).
+
+loc_seq <- seq_len(length(unique(hscp_loc$loc_name)))+127 # adding value to sequence will ensure that reuse same codes and risk confusing localities
 loc_zeros <- case_when(nchar(loc_seq) == 1 ~ "00000",
                        nchar(loc_seq) == 2 ~ "0000",
                        nchar(loc_seq) == 3 ~ "000")
 
+#generate sequential number for each locality that fits pattern of a GSS geography code
 loc_code <- paste0("S99", loc_zeros, loc_seq)
-
 loc_code <- data.frame(hscp_locality = loc_code, loc_name = unique(hscp_loc$loc_name))
 
+#add that artificial GSS code to dataframe
 hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("loc_name"))
 
 saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
@@ -273,11 +339,14 @@ geo_parents <- left_join(x=geo_parents, y=opt_lookup, by=c("parent_code" = "code
   select(-c(areatype)) %>% rename(parent_area = areaname)
 
 #Merging parents to geo_lookup
-opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code", all.x = TRUE)
+#opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code", all.x = TRUE)
 
-##No IZ seem to be assigned to more than one partnership in this file.
 
-###There are a number of IZ's with the same name, recoding.
+opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code")
+
+## No IZ should assigned to more than one hscp partnership in this file - check by filtering the geo type to IZ and the total should be 1279
+
+###There are a number of IZ's with the same name which could be confusing, recoding to avoid this issue.
 opt_lookup %<>%
   mutate(areaname = case_when(
     code == "S02001938" ~ "Woodside-Glasgow City",
@@ -345,7 +414,7 @@ opt_lookup %<>%
     TRUE  ~  paste(areaname))) #Last line for the rest of cases
 
 opt_lookup %<>%
-  #Creating variable that includeas area name and type for trend plotting
+  #Creating variable that includes area name and type for trend plotting
   mutate(areaname_full = paste(areaname, "-", areatype)) %>%
   mutate_if(is.character, factor) %>% #transforming into factors
   select(-c(parent_code)) %>%
@@ -360,5 +429,8 @@ opt_lookup %<>%
          areaname_full = gsub("Intermediate zone", "IZ", areaname_full))
 
 saveRDS(opt_lookup, paste0(geo_lookup, "opt_geo_lookup.rds"))
+
+
+check <- readRDS(paste0(geo_lookup, "opt_geo_lookup_26082024.rds"))
 
 ##END

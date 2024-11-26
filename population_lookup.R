@@ -16,12 +16,6 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(readr)
 
 # Varies filepaths depending on if using server or not and what organisation uses it.
-if (exists("organisation") == TRUE) { #Health Scotland
-  if (organisation == "HS") { 
-    pop_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Population/"
-    geo_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Geography/"
-  }
-} else  { #ISD, first server then desktop
   if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
     pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
     geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
@@ -29,7 +23,6 @@ if (exists("organisation") == TRUE) { #Health Scotland
     pop_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Population/"
     geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
   }
-}
 
 # Setting file permissions to anyone to allow writing/overwriting of project files
 Sys.umask("006")

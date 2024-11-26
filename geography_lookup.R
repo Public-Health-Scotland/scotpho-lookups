@@ -10,6 +10,7 @@
 #Part 4 - Parent geography for IZ and locality
 #Part 5 - Create dictionary  to have the names and not codes.
 #Part 6 - Deprivation (SIMD) geographies
+
 ###############################################.
 ## Packages and filepaths ----
 ###############################################.
@@ -20,18 +21,13 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(tidyr)
 library(magrittr)
 
+
 # Varies filepaths depending on if using server or not and what organisation uses it.
-if (exists("organisation") == TRUE) { #Health Scotland
-  if (organisation == "HS") { 
-    geo_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Geography/"
-  }
-} else  { #ISD, first server then desktop
   if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
     geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
   } else  {
     geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
   }
-}
 
 ###############################################.
 ## Functions ----

@@ -37,7 +37,6 @@ library(magrittr)
 # path to geography lookups folder
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
-
 ###############################################.
 ## Functions ----
 ###############################################.
@@ -113,8 +112,6 @@ hscp_loc <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/HSCP Localit
   select(datazone2011, hscp_locality, hscp2019name) 
 
 
-
-
 # When updating the locality lookup its generally a good idea to check what changes may have taken place between lookups as this can help with 
 # explaining where/when indicator data might be different. The optional code below can help study differences but isn't essential to run.
 
@@ -160,7 +157,6 @@ hscp_loc <- readRDS('/conf/linkage/output/lookups/Unicode/Geography/HSCP Localit
 ## Studying the columns where NA appear in the files below helps you check which localities existed in which lookups
 # joined <-full_join(loc_2022,loc_2023)
 # joined2 <-full_join(joined,hscp_loc_2024)
-
 
 # sort by locality name then partnership 
 hscp_loc %<>% 

@@ -103,9 +103,6 @@ hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20220630.rds
   select(datazone2011, hscp_locality, hscp2019name) 
 
 
-
-
-
 # Update November 2021: in the latest update of the lookup, 'Renfrewshire North West 
 # and South' has been updated to 'West Renfrewshire' - this needs to be renamed 
 # so that the alphabetical order of localities is the same and it is given the 

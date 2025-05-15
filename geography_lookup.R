@@ -34,6 +34,7 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(tidyr)
 library(magrittr)
 
+
 # path to geography lookups folder
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
@@ -59,21 +60,28 @@ extract_data <- function(resource_id) {
 #and different simd versions
 create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   
-  # Creating quintile variables to keep, they vary with the version
+  # Creating quintile/decile variables to keep, they vary with the version
+  sc_decile_var <- paste0("simd", simd_version, "countrydecile")
   sc_quin_var <- paste0("simd", simd_version, "countryquintile")
   hb_quin_var <- paste0("simd", simd_version, "hbquintile")
   ca_quin_var <- paste0("simd", simd_version, "caquintile")
   
+  
   # Extract the data, keep some variables and rename them
   data_simd <- extract_data(resource_id = resource_id) %>% 
-    select(datazone, ca, hb, all_of(sc_quin_var), all_of(hb_quin_var), all_of(ca_quin_var)) %>% 
-    rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
+    select(datazone, ca, hb, sc_decile_var, sc_quin_var, hb_quin_var, ca_quin_var ) %>% 
+    rename(sc_decile = sc_decile_var, sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
+  
   
   # recode simd 2004 and 2006, as they follow an inverse scale.
   if (simd_version %in% c("2004", "2006")) {
     data_simd <- data_simd %>%
+      mutate_at(vars(sc_decile),
+                ~recode(., "1" = 10, "2" = 9, "3" = 8, "4" = 7, "5" = 6, "6" = 5, "7" = 4, "8" = 3, "9" = 2, "10" = 1)) %>%
       mutate_at(vars(sc_quin, ca_quin, hb_quin),
                 ~recode(., "1" = 5, "2" = 4, "3" = 3, "4" = 2, "5" = 1))
+    
+    
   } else {
     data_simd <- data_simd
   }
@@ -81,7 +89,8 @@ create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   # Creating a list of datasets with all the years used for each version
   data_simd_list <- lapply(year_list,
                            function(year_chosen){
-                             data_simd %>% mutate(year = year_chosen)
+                             data_simd %>% mutate(year = year_chosen, 
+                                                  scotland = "S00000001")
                            } )
   # Joining all the dataframes in one
   data_simd <- do.call("rbind", data_simd_list) 
@@ -302,11 +311,11 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2023, 
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2024, 
               simd_version = "2020v2") #simd version 2016
 )
 
-saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
+saveRDS(data_depr_simd, paste0(geo_lookup, 'simd_datazone_lookup.rds'))
 
 ###############################################.
 ## Part 7 - Geography lookup for profiles tool ----

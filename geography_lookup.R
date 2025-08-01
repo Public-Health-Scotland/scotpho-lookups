@@ -20,18 +20,21 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(tidyr)
 library(magrittr)
 
-# Varies filepaths depending on if using server or not and what organisation uses it.
-if (exists("organisation") == TRUE) { #Health Scotland
-  if (organisation == "HS") { 
-    geo_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Geography/"
-  }
-} else  { #ISD, first server then desktop
-  if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
-    geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-  } else  {
-    geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
-  }
-}
+## NOT NEEDED NOW SINCE POSIT AND PHS?
+# # Varies filepaths depending on if using server or not and what organisation uses it.
+# if (exists("organisation") == TRUE) { #Health Scotland
+#   if (organisation == "HS") { 
+#     geo_lookup <- "X:/ScotPHO Profiles/Data/Lookups/Geography/"
+#   }
+# } else  { #ISD, first server then desktop
+#   if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
+#     geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
+#   } else  {
+#     geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
+#   }
+# }
+
+geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
 ###############################################.
 ## Functions ----
@@ -102,7 +105,7 @@ create_dictionary <- function(area_name, area_code, filename) {
 # Check that this is the latest version available.
 # IMPORTANT: if using an updated lookup, check that the location names have not changed, 
 # as any changes could cause different 9 digit code to be allocated in the next section.
-hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20220630.rds")) %>% 
+hscp_loc <- readRDS(paste0(geo_lookup, "HSCP Localities_DZ11_Lookup_20220630.rds")) %>% # THERE'S A MORE RECENT FILE IN THE LOOKUPS FOLDER FROM 2023 (SAME N ROWS AND COLS, NO OBVIOUS DIFFS) - DON'T KNOW IF THIS SHOULD BE USED HERE INSTEAD?
   setNames(tolower(names(.))) %>%  #variables to lower case
   select(datazone2011, hscp_locality, hscp2019name) 
 
@@ -170,6 +173,114 @@ adp_lookup <- data.frame(
 
 saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
 
+
+###############################################.
+## Part 2.1 - Police Division lookup ----
+###############################################.
+# Creating lookup of PDss with council area
+pd_lookup <- data.frame(
+  ca2019 = c("S12000005",
+             "S12000006",
+             "S12000008",
+             "S12000010",
+             "S12000011",
+             "S12000013",
+             "S12000014",
+             "S12000017",
+             "S12000018",
+             "S12000019",
+             "S12000020",
+             "S12000021",
+             "S12000023",
+             "S12000026",
+             "S12000027",
+             "S12000028",
+             "S12000029",
+             "S12000030",
+             "S12000033",
+             "S12000034",
+             "S12000035",
+             "S12000036",
+             "S12000038",
+             "S12000039",
+             "S12000040",
+             "S12000041",
+             "S12000042",
+             "S12000045",
+             "S12000047",
+             "S12000048",
+             "S12000049",
+             "S12000050"
+  ),
+  pd = c("S32000008",
+         "S32000005",
+         "S32000004",
+         "S32000012",
+         "S32000018",
+         "S32000010",
+         "S32000008",
+         "S32000010",
+         "S32000013",
+         "S32000012",
+         "S32000015",
+         "S32000004",
+         "S32000010",
+         "S32000012",
+         "S32000010",
+         "S32000004",
+         "S32000019",
+         "S32000008",
+         "S32000015",
+         "S32000015",
+         "S32000003",
+         "S32000006",
+         "S32000013",
+         "S32000003",
+         "S32000012",
+         "S32000017",
+         "S32000017",
+         "S32000018",
+         "S32000016",
+         "S32000017",
+         "S32000018",
+         "S32000019"
+  ),
+  pd_name = c("Forth Valley",
+              "Dumfries and Galloway",
+              "Ayrshire",
+              "The Lothians and Scottish Borders",
+              "Greater Glasgow",
+              "Highlands and Islands",
+              "Forth Valley",
+              "Highlands and Islands",
+              "Renfrewshire and Inverclyde",
+              "The Lothians and Scottish Borders",
+              "North East",
+              "Ayrshire",
+              "Highlands and Islands",
+              "The Lothians and Scottish Borders",
+              "Highlands and Islands",
+              "Ayrshire",
+              "Lanarkshire",
+              "Forth Valley",
+              "North East",
+              "North East",
+              "Argyll and West Dunbartonshire",
+              "Edinburgh",
+              "Renfrewshire and Inverclyde",
+              "Argyll and West Dunbartonshire",
+              "The Lothians and Scottish Borders",
+              "Tayside",
+              "Tayside",
+              "Greater Glasgow",
+              "Fife",
+              "Tayside",
+              "Greater Glasgow",
+              "Lanarkshire"
+  ))
+
+saveRDS(pd_lookup, paste0(geo_lookup, 'PD_CA_lookup.rds'))
+
 ###############################################.
 ## Part 3  - Joining all geographies ----
 ###############################################.
@@ -192,6 +303,10 @@ dz11_lookup <- left_join(dz11_lookup, hscp_loc, by = "datazone2011")
 # merging adps
 dz11_lookup <- left_join(dz11_lookup, adp_lookup, by = "ca2019") %>% 
   select(-loc_name, -hscp2019name, -adp_name)
+
+# merging PDs
+dz11_lookup <- left_join(dz11_lookup, pd_lookup, by = "ca2019") %>% 
+  select(-pd_name)
 
 saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
 
@@ -217,6 +332,12 @@ adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
 
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
+# Create PD dictionary.
+pd_dictio <- pd_lookup %>% rename(areaname = pd_name, code = pd) %>%
+  select(-ca2019) %>% unique()
+
+saveRDS(pd_dictio, paste0(geo_lookup, 'PDdictionary.rds'))
+
 # Creating dictionaries for council, health board, iz and hscp
 iz_dictio <- create_dictionary(intzonename, intzone, "IZ11")
 ca_dictio <- create_dictionary(caname, ca, "CA")
@@ -228,7 +349,7 @@ scot_dictio <- data.frame(code = 'S00000001', areaname = "Scotland")
 saveRDS(scot_dictio, paste0(geo_lookup, 'Scotlandictionary.rds'))
 
 # Merge files together. 
-code_dictio <- rbind(scot_dictio, hb_dictio, ca_dictio, adp_dictio, part_dictio, 
+code_dictio <- rbind(scot_dictio, hb_dictio, ca_dictio, adp_dictio, pd_dictio, part_dictio, 
                      local_dictio, iz_dictio)
 saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 
@@ -249,8 +370,8 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2022, 
-              simd_version = "2020v2") #simd version 2016
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2022, # does this need to be increased to 2025 until new SIMD released?
+              simd_version = "2020v2") #simd version 2020
 )
 
 saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
@@ -267,6 +388,7 @@ opt_lookup <- readRDS(paste0(geo_lookup, "codedictionary.rds")) %>%
                               substr(code, 1, 3) == "S11" ~ "Alcohol & drug partnership",
                               substr(code, 1, 3) == "S99" ~ "HSC locality",
                               substr(code, 1, 3) == "S37" ~ "HSC partnership",
+                              substr(code, 1, 3) == "S32" ~ "Police division",
                               substr(code, 1, 3) == "S02" ~ "Intermediate zone"),
          #Changing ands for & to reduce issues with long labels and " - " for "-"
          areaname = gsub(" and ", " & ", areaname),
@@ -282,7 +404,7 @@ geo_parents <- left_join(x=geo_parents, y=opt_lookup, by=c("parent_code" = "code
   select(-c(areatype)) %>% rename(parent_area = areaname)
 
 #Merging parents to geo_lookup
-opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code", all.x = TRUE)
+opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code") 
 
 ##No IZ seem to be assigned to more than one partnership in this file.
 
@@ -364,6 +486,7 @@ opt_lookup %<>%
          areaname_full = gsub("Health board", "HB", areaname_full),
          areaname_full = gsub("Council area", "CA", areaname_full),
          areaname_full = gsub("Alcohol & drug partnership", "ADP", areaname_full),
+         areaname_full = gsub("Police division", "PD", areaname_full),
          areaname_full = gsub("HSC partnership", "HSCP", areaname_full),
          areaname_full = gsub("HSC locality", "HSCL", areaname_full),
          areaname_full = gsub("Intermediate zone", "IZ", areaname_full))

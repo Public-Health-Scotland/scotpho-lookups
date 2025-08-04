@@ -58,20 +58,26 @@ extract_data <- function(resource_id) {
 #and different simd versions
 create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   
+  # lookup from CA to ADP, HSCP, and PD
+  lookup <- readRDS(paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds')) %>%
+    select(ca = ca2019, hscp = hscp2019, adp, pd) %>% distinct(.)
+  
   # Creating quintile variables to keep, they vary with the version
   sc_quin_var <- paste0("simd", simd_version, "countryquintile")
   hb_quin_var <- paste0("simd", simd_version, "hbquintile")
   ca_quin_var <- paste0("simd", simd_version, "caquintile")
+  hscp_quin_var <- paste0("simd", simd_version, "hscpquintile")
   
   # Extract the data, keep some variables and rename them
   data_simd <- extract_data(resource_id = resource_id) %>% 
-    select(datazone, ca, hb, sc_quin_var, hb_quin_var, ca_quin_var ) %>% 
-    rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
+    select(datazone, ca, hb, sc_quin_var, hb_quin_var, ca_quin_var, hscp_quin_var ) %>% 
+    rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var, hscp_quin = hscp_quin_var) %>%
+    left_join(x = ., y = lookup, by = "ca")
   
   # recode simd 2004 and 2006, as they follow an inverse scale.
   if (simd_version %in% c("2004", "2006")) {
     data_simd <- data_simd %>%
-      mutate_at(vars(sc_quin, ca_quin, hb_quin),
+      mutate_at(vars(sc_quin, ca_quin, hb_quin, hscp_quin),
                 ~recode(., "1" = 5, "2" = 4, "3" = 3, "4" = 2, "5" = 1))
   } else {
     data_simd <- data_simd
@@ -370,7 +376,7 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2022, # does this need to be increased to 2025 until new SIMD released?
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2025, 
               simd_version = "2020v2") #simd version 2020
 )
 

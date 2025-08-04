@@ -15,9 +15,11 @@ library(httr) # api connection
 library(jsonlite)  # transforming JSON files into dataframes
 library(readr)
 
+
 # Lookups
 pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
+
 
 # Setting file permissions to anyone to allow writing/overwriting of project files
 Sys.umask("006")
@@ -162,7 +164,8 @@ rm(dz01_base) #freeing up memory
 
 # Alternative code chunk (the function to open files and manipulation direct from API doesn't like running in posit ?too memory intensive?)
 # If the previous one times out/fails try this, but the link might change every year
-dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_07092021.csv") %>%
+#dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_07092021.csv") %>%
+dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_21112024.csv") %>%
   setNames(tolower(names(.))) %>%   #variables to lower case
   filter(year > 2001 & substr(datazone, 1, 3) != "S92" & sex != "All") %>% #years and no Scotland
   mutate(sex = recode(sex, "Male" = 1, "Female" = 2, "f" = 2, "m" = 1)) %>%
@@ -183,7 +186,6 @@ rm(dz11_base_2023)
  
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
-
 
 ###############################################.
 # Intermediate zones, councils, health boards and HSC partnerships

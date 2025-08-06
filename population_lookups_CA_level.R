@@ -88,7 +88,7 @@ library(dplyr)
 library(tidyr)
 
 ## filepaths ----
-cl_out <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #cl-out folderwith new 2022 estimates
+cl_out <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #cl-out folderwith new 2023 estimates
 scotpho_lookups_folder <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/" # scotpho folder where geography and population lookups are saved
 
 
@@ -98,11 +98,11 @@ scotpho_lookups_folder <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/" # scotpho f
 
 ## geography lookup 
 geo_lookup<- readRDS(paste0(scotpho_lookups_folder, "Geography/DataZone11_All_Geographies_Lookup.rds")) |>
-  select(ca2019, hscp2019, hb2019, adp) |>
+  select(ca2019, hscp2019, hb2019, adp, pd) |>
   unique()
 
 ## new council area population estimates
-CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2022.rds")) |>
+CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2023.rds")) |>
   filter(year >= 2002)
 
 
@@ -142,7 +142,7 @@ create_population_lookups <- function(lower_age, upper_age, basefile = CA_estima
   
   # step 4: pivot the data longer to create a geography code column
   CA_estimates <- CA_estimates |>
-    pivot_longer(cols = c(ca2019, hscp2019, hb2019, adp, Scotland),
+    pivot_longer(cols = c(ca2019, hscp2019, hb2019, adp, pd, Scotland),
                  names_to = "area_type",
                  values_to = "code")
   
@@ -204,6 +204,8 @@ dq_check <- function(filename){
 
 create_population_lookups(lower_age = 0, upper_age = 90, name = "allages")
 create_population_lookups(lower_age = 16, upper_age = 90, name = "16+")
+create_population_lookups(lower_age = 18, upper_age = 90, name = "18+")
+create_population_lookups(lower_age = 19, upper_age = 90, name = "19+")
 create_population_lookups(lower_age = 11, upper_age = 25, name = "11to25")
 create_population_lookups(lower_age = 0, upper_age = 15, name = "under16")
 create_population_lookups(lower_age = 0, upper_age = 4, name = "under5")

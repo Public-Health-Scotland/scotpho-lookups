@@ -15,14 +15,9 @@ library(httr) # api connection
 library(jsonlite)  # transforming JSON files into dataframes
 library(readr)
 
-# Varies filepaths depending on if using server or not and what organisation uses it.
-  if (sessionInfo()$platform %in% c("x86_64-redhat-linux-gnu (64-bit)", "x86_64-pc-linux-gnu (64-bit)")) {
-    pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
-    geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
-  } else {
-    pop_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Population/"
-    geo_lookup <- "//stats/ScotPHO/Profiles/Data/Lookups/Geography/"
-  }
+# Filepaths 
+pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
+geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
 # Setting file permissions to anyone to allow writing/overwriting of project files
 Sys.umask("006")
@@ -93,7 +88,7 @@ create_pop <- function(lower, upper, name, dz) {
   saveRDS(data_dz, file=paste0(pop_lookup, dz, '_', name,'.rds'))
   
    # Creating file for indicators that need council as base
-    data_ca <- data_dz %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', "S11", "S37"))
+    data_ca <- data_dz %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', "S11", "S37", "S32"))
     
     saveRDS(data_ca, file=paste0(pop_lookup, 'CA_', name,'.rds'))
   
@@ -107,7 +102,7 @@ create_pop <- function(lower, upper, name, dz) {
     saveRDS(data_dz_sr, file=paste0(pop_lookup, dz, '_', name,'_SR.rds'))
     
     # Creating file for indicators that need council as base
-    data_ca_sr <- data_dz_sr %>% subset(substr(code,1,3) %in%  c('S00', 'S08', 'S12', "S11", "S37"))
+    data_ca_sr <- data_dz_sr %>% subset(substr(code,1,3) %in%  c('S00', 'S08', 'S12', "S11", "S37", "S32"))
       
       saveRDS(data_ca_sr, file=paste0(pop_lookup, 'CA_', name,'_SR.rds'))
   
@@ -178,7 +173,7 @@ dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-
   create_agegroups()  %>%
   rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
 
-##temporary fix for delayed 2022 SAPE 
+##temporary fix for delayed SAPE 
 #recycle 2022 populations as if they were the new 2023 populations -
 dz11_base_2022 <- dz11_base |>
   filter(year==2022) |> # filter for latest year
@@ -200,8 +195,9 @@ ca_pop <- extract_open_data("09ebfefb-33f4-4f6a-8312-2d14e2b02ace", ca)
 iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", intzone)
 
 iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", intzone) 
-#temporary fix for delayed 2022 SAPE 
-#recycle 2021 populations as if they were the new 2022 populations - this will need to be revised & reupdated once actual SAPE 2022 are released
+
+#temporary fix for delayed SAPE 
+#recycle 2022 populations as if they were the new 2023 populations - this will need to be revised & reupdated once actual SAPE 2023 are released
 iz11_pop_2022  <- iz11_pop|>
   filter(year==2022) |>
   mutate(year=2023)
@@ -242,14 +238,93 @@ adp_pop <- ca_pop %>%
   summarise(pop = sum(pop)) %>% ungroup()
 
 ###############################################.
+# PD population
+
+# Creating lookup of PDs with council area
+pd_lookup <- data.frame(
+  ca2019 = c("S12000005",
+             "S12000006",
+             "S12000008",
+             "S12000010",
+             "S12000011",
+             "S12000013",
+             "S12000014",
+             "S12000017",
+             "S12000018",
+             "S12000019",
+             "S12000020",
+             "S12000021",
+             "S12000023",
+             "S12000026",
+             "S12000027",
+             "S12000028",
+             "S12000029",
+             "S12000030",
+             "S12000033",
+             "S12000034",
+             "S12000035",
+             "S12000036",
+             "S12000038",
+             "S12000039",
+             "S12000040",
+             "S12000041",
+             "S12000042",
+             "S12000045",
+             "S12000047",
+             "S12000048",
+             "S12000049",
+             "S12000050"
+  ),
+  pd = c("S32000008",
+         "S32000005",
+         "S32000004",
+         "S32000012",
+         "S32000018",
+         "S32000010",
+         "S32000008",
+         "S32000010",
+         "S32000013",
+         "S32000012",
+         "S32000015",
+         "S32000004",
+         "S32000010",
+         "S32000012",
+         "S32000010",
+         "S32000004",
+         "S32000019",
+         "S32000008",
+         "S32000015",
+         "S32000015",
+         "S32000003",
+         "S32000006",
+         "S32000013",
+         "S32000003",
+         "S32000012",
+         "S32000017",
+         "S32000017",
+         "S32000018",
+         "S32000016",
+         "S32000017",
+         "S32000018",
+         "S32000019"
+  ))
+
+pd_pop <- ca_pop %>% 
+  merge(y=pd_lookup, by.x="code", by.y="ca2019") %>%
+  group_by(year, sex_grp, age, pd) %>%
+  summarise(pop = sum(pop)) %>%
+  ungroup() %>%
+  rename(code = pd)
+
+###############################################.
 #merging all geographical levels
-all_pop01 <- rbind(iz01_pop, ca_pop, adp_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
+all_pop01 <- rbind(iz01_pop, ca_pop, adp_pop, pd_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
   rename(denominator=pop) %>% create_agegroups() %>% #recoding age
   mutate(year = as.numeric(year))
 
 saveRDS(all_pop01, file=paste0(pop_lookup, "basefile_DZ01.rds"))
 
-all_pop11 <- rbind(iz11_pop, ca_pop, adp_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
+all_pop11 <- rbind(iz11_pop, ca_pop, adp_pop, pd_pop, hb_pop, hscp_pop, scot_pop, local_pop) %>% 
   rename(denominator=pop) %>% create_agegroups() %>%  #recoding age
   mutate(year = as.numeric(year))
 
@@ -270,21 +345,32 @@ dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds")) %>%
 depr_pop_base <- rbind(dz01_base, dz11_base)
 rm(dz01_base, dz11_base)
 
-depr_lookup <- readRDS(paste0(geo_lookup, 'deprivation_geography.rds')) %>% 
+depr_lookup <- readRDS(paste0(geo_lookup, 'simd_datazone_lookup.rds')) %>% 
   mutate(scotland="S00000001")
 
 depr_pop_base <- left_join(depr_pop_base, depr_lookup, by = c("datazone", "year"))
 
 depr_pop_base <- rbind( 
-  create_quintile_data(geo = "scotland", quint = "sc_quin"),   #Scotland 
-  #Health boards using national quintiles
+  # Scotland quintiles
+  create_quintile_data(geo = "scotland", quint = "sc_quin"),   
+  # Scotland deciles
+  create_quintile_data(geo = "scotland", quint = "sc_decile"),   
+  # Health boards using national quintiles
   create_quintile_data(geo = "hb", quint = "sc_quin"),
-  #Health boards using health board quintiles
+  # Health boards using health board quintiles
   create_quintile_data(geo = "hb", quint = "hb_quin"),
-  #Council area using national quintiles
+  # Council areas using national quintiles
   create_quintile_data(geo = "ca", quint = "sc_quin"),
-  #Council area using concil quintiles
-  create_quintile_data(geo = "ca", quint = "ca_quin"))
+  # Council areas using council quintiles
+  create_quintile_data(geo = "ca", quint = "ca_quin"),
+  # HSCP using national quintiles
+  create_quintile_data(geo = "hscp", quint = "sc_quin"),
+  # HSCP using HSCP quintiles
+  create_quintile_data(geo = "hscp", quint = "hscp_quin"),
+  # ADP quintiles
+  create_quintile_data(geo = "adp", quint = "sc_quin"),
+  # PD quintiles
+  create_quintile_data(geo = "pd", quint = "sc_quin"))
 
 depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, quint_type) %>% 
   summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 
@@ -303,6 +389,7 @@ create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages")
 create_pop(dz = "DZ11", lower = 60, upper = 200, name = "pop_60+")
 create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+")
 create_pop(dz = "DZ11", lower = 18, upper = 200, name = "pop_18+")
+create_pop(dz = "DZ11", lower = 19, upper = 200, name = "pop_19+")
 create_pop(dz = "DZ11", lower = 65, upper = 200, name = "pop_65+")
 create_pop(dz = "DZ11", lower = 75, upper = 200, name = "pop_75+")
 create_pop(dz = "DZ11", lower = 85, upper = 200, name = "pop_85+")
@@ -340,7 +427,7 @@ working_pop <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) %>%
 saveRDS(working_pop, file=paste0(pop_lookup, 'DZ11_working_pop.rds'))
 
 # For CA
-working_pop <- working_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37'))
+working_pop <- working_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37', 'S32'))
 saveRDS(working_pop, file=paste0(pop_lookup, 'CA_working_pop.rds'))
 
 #For deprivation cases
@@ -361,7 +448,7 @@ teenpreg_pop <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) %>%
 
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'DZ11_pop_fem15to19.rds'))
 
-teenpreg_pop <- teenpreg_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37'))
+teenpreg_pop <- teenpreg_pop %>% subset(substr(code,1,3) %in% c('S00', 'S08', 'S12', 'S37', 'S32'))
 saveRDS(teenpreg_pop, file=paste0(pop_lookup, 'CA_pop_fem15to19.rds'))
 
 #For deprivation cases
@@ -376,8 +463,8 @@ saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 # Live births (used for infant deaths under 1)
 # received data requested from NRS 
 
-live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Received Data/",
-                                 "Births 2002-2021 datazone_2011.xlsx")) %>%
+live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Received Data/Live births/",
+                                         "Births 2002-2023 datazone_2011.xlsx")) %>%
   janitor::clean_names() %>% 
   rename(datazone = datazone_2011, year = registration_year) %>% 
   group_by(year, datazone) %>% 
@@ -385,7 +472,7 @@ live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Receiv
   
 
 live_lookup <- readRDS(paste0(geo_lookup, "DataZone11_All_Geographies_Lookup.rds")) %>% 
-  select(datazone2011, ca2019, hb2019, hscp2019) %>% 
+  select(datazone2011, ca2019, hb2019, hscp2019, adp, pd) %>% 
   mutate(scot = "S00000001")
 
 live_births <- left_join(live_births, live_lookup, by = c("datazone" = "datazone2011"))

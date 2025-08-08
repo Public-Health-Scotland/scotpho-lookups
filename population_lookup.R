@@ -367,8 +367,6 @@ depr_pop_base <- rbind(
   create_quintile_data(geo = "hscp", quint = "sc_quin"),
   # HSCP using HSCP quintiles
   create_quintile_data(geo = "hscp", quint = "hscp_quin"),
-  # ADP quintiles
-  create_quintile_data(geo = "adp", quint = "sc_quin"),
   # PD quintiles
   create_quintile_data(geo = "pd", quint = "sc_quin"))
 
@@ -472,7 +470,7 @@ live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Receiv
   
 
 live_lookup <- readRDS(paste0(geo_lookup, "DataZone11_All_Geographies_Lookup.rds")) %>% 
-  select(datazone2011, ca2019, hb2019, hscp2019, adp, pd) %>% 
+  select(datazone2011, ca2019, hb2019, hscp2019, pd) %>% 
   mutate(scot = "S00000001")
 
 live_births <- left_join(live_births, live_lookup, by = c("datazone" = "datazone2011"))

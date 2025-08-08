@@ -17,7 +17,8 @@
 
 
 #Part 1 - HSC locality lookup.
-#Part 2 - ADP lookup
+#Part 2a - ADP lookup
+#Part 2b - Police division lookup
 #Part 3 - Joining all geographies 
 #Part 4 - Parent geography for IZ and locality
 #Part 5 - Create dictionary  to have the names and not codes.
@@ -434,7 +435,6 @@ data_depr_simd <- rbind(
   create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2024, 
               simd_version = "2020v2") #simd version 2020
 ) %>%
-  merge(y=adp_lookup, by.x="ca", by.y="ca2019") %>%
   merge(y=pd_lookup, by.x="ca", by.y="ca2019") %>%
   select(-ends_with("name"))
 

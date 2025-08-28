@@ -17,7 +17,8 @@
 
 
 #Part 1 - HSC locality lookup.
-#Part 2 - ADP lookup
+#Part 2a - ADP lookup
+#Part 2b - Police division lookup
 #Part 3 - Joining all geographies 
 #Part 4 - Parent geography for IZ and locality
 #Part 5 - Create dictionary  to have the names and not codes.
@@ -33,6 +34,7 @@ library(httr) # api connection
 library(jsonlite)  # transforming JSON files into dataframes
 library(tidyr)
 library(magrittr)
+
 
 # path to geography lookups folder
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
@@ -59,21 +61,29 @@ extract_data <- function(resource_id) {
 #and different simd versions
 create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   
-  # Creating quintile variables to keep, they vary with the version
+  # Creating quintile/decile variables to keep, they vary with the version
+  sc_decile_var <- paste0("simd", simd_version, "countrydecile")
   sc_quin_var <- paste0("simd", simd_version, "countryquintile")
   hb_quin_var <- paste0("simd", simd_version, "hbquintile")
   ca_quin_var <- paste0("simd", simd_version, "caquintile")
+  hscp_quin_var <- paste0("simd", simd_version, "hscpquintile")
+  
   
   # Extract the data, keep some variables and rename them
   data_simd <- extract_data(resource_id = resource_id) %>% 
-    select(datazone, ca, hb, all_of(sc_quin_var), all_of(hb_quin_var), all_of(ca_quin_var)) %>% 
-    rename(sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var)
+    select(datazone, ca, hb, hscp, sc_decile_var, all_of(sc_quin_var), all_of(hb_quin_var), all_of(ca_quin_var), all_of(hscp_quin_var) ) %>% 
+    rename(sc_decile = sc_decile_var, sc_quin = sc_quin_var, hb_quin = hb_quin_var, ca_quin = ca_quin_var, hscp_quin = hscp_quin_var)
+  
   
   # recode simd 2004 and 2006, as they follow an inverse scale.
   if (simd_version %in% c("2004", "2006")) {
     data_simd <- data_simd %>%
-      mutate_at(vars(sc_quin, ca_quin, hb_quin),
+      mutate_at(vars(sc_decile),
+                ~recode(., "1" = 10, "2" = 9, "3" = 8, "4" = 7, "5" = 6, "6" = 5, "7" = 4, "8" = 3, "9" = 2, "10" = 1)) %>%
+      mutate_at(vars(sc_quin, ca_quin, hb_quin, hscp_quin),
                 ~recode(., "1" = 5, "2" = 4, "3" = 3, "4" = 2, "5" = 1))
+    
+    
   } else {
     data_simd <- data_simd
   }
@@ -81,7 +91,8 @@ create_simd <- function(resource_id, year_list, simd_version) { #list_pos
   # Creating a list of datasets with all the years used for each version
   data_simd_list <- lapply(year_list,
                            function(year_chosen){
-                             data_simd %>% mutate(year = year_chosen)
+                             data_simd %>% mutate(year = year_chosen, 
+                                                  scotland = "S00000001")
                            } )
   # Joining all the dataframes in one
   data_simd <- do.call("rbind", data_simd_list) 
@@ -194,7 +205,7 @@ hscp_loc <- left_join(x = hscp_loc, y = loc_code, by = c("loc_name"))
 saveRDS(hscp_loc, paste0(geo_lookup, 'DataZone11_HSCLocality_Lookup.rds'))
 
 ###############################################.
-## Part 2 - ADP lookup ----
+## Part 2a - ADP lookup ----
 ###############################################.
 # Creating lookup of ADPs with council area
 adp_lookup <- data.frame(
@@ -223,6 +234,115 @@ adp_lookup <- data.frame(
 
 saveRDS(adp_lookup, paste0(geo_lookup, 'ADP_CA_lookup.rds'))
 
+
+###############################################.
+## Part 2b - Police Division lookup ----
+###############################################.
+# Creating lookup of PDss with council area
+pd_lookup <- data.frame(
+  ca2019 = c("S12000005",
+             "S12000006",
+             "S12000008",
+             "S12000010",
+             "S12000011",
+             "S12000013",
+             "S12000014",
+             "S12000017",
+             "S12000018",
+             "S12000019",
+             "S12000020",
+             "S12000021",
+             "S12000023",
+             "S12000026",
+             "S12000027",
+             "S12000028",
+             "S12000029",
+             "S12000030",
+             "S12000033",
+             "S12000034",
+             "S12000035",
+             "S12000036",
+             "S12000038",
+             "S12000039",
+             "S12000040",
+             "S12000041",
+             "S12000042",
+             "S12000045",
+             "S12000047",
+             "S12000048",
+             "S12000049",
+             "S12000050"
+  ),
+  pd = c("S32000008",
+         "S32000005",
+         "S32000004",
+         "S32000012",
+         "S32000018",
+         "S32000010",
+         "S32000008",
+         "S32000010",
+         "S32000013",
+         "S32000012",
+         "S32000015",
+         "S32000004",
+         "S32000010",
+         "S32000012",
+         "S32000010",
+         "S32000004",
+         "S32000019",
+         "S32000008",
+         "S32000015",
+         "S32000015",
+         "S32000003",
+         "S32000006",
+         "S32000013",
+         "S32000003",
+         "S32000012",
+         "S32000017",
+         "S32000017",
+         "S32000018",
+         "S32000016",
+         "S32000017",
+         "S32000018",
+         "S32000019"
+  ),
+  pd_name = c("Forth Valley",
+              "Dumfries and Galloway",
+              "Ayrshire",
+              "The Lothians and Scottish Borders",
+              "Greater Glasgow",
+              "Highlands and Islands",
+              "Forth Valley",
+              "Highlands and Islands",
+              "Renfrewshire and Inverclyde",
+              "The Lothians and Scottish Borders",
+              "North East",
+              "Ayrshire",
+              "Highlands and Islands",
+              "The Lothians and Scottish Borders",
+              "Highlands and Islands",
+              "Ayrshire",
+              "Lanarkshire",
+              "Forth Valley",
+              "North East",
+              "North East",
+              "Argyll and West Dunbartonshire",
+              "Edinburgh",
+              "Renfrewshire and Inverclyde",
+              "Argyll and West Dunbartonshire",
+              "The Lothians and Scottish Borders",
+              "Tayside",
+              "Tayside",
+              "Greater Glasgow",
+              "Fife",
+              "Tayside",
+              "Greater Glasgow",
+              "Lanarkshire"
+  ))
+
+saveRDS(pd_lookup, paste0(geo_lookup, 'PD_CA_lookup.rds'))
+
+
 ###############################################.
 ## Part 3  - Joining all geographies ----
 ###############################################.
@@ -245,6 +365,10 @@ dz11_lookup <- left_join(dz11_lookup, hscp_loc, by = "datazone2011")
 # merging adps
 dz11_lookup <- left_join(dz11_lookup, adp_lookup, by = "ca2019") %>% 
   select(-loc_name, -hscp2019name, -adp_name)
+
+# merging PDs
+dz11_lookup <- left_join(dz11_lookup, pd_lookup, by = "ca2019") %>% 
+  select(-pd_name)
 
 saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
 
@@ -270,6 +394,12 @@ adp_dictio <- adp_lookup %>% rename(areaname = adp_name, code = adp) %>%
 
 saveRDS(adp_dictio, paste0(geo_lookup, 'ADPdictionary.rds'))
 
+# Create PD dictionary.
+pd_dictio <- pd_lookup %>% rename(areaname = pd_name, code = pd) %>%
+  select(-ca2019) %>% unique()
+
+saveRDS(pd_dictio, paste0(geo_lookup, 'PDdictionary.rds'))
+
 # Creating dictionaries for council, health board, iz and hscp
 iz_dictio <- create_dictionary(intzonename, intzone, "IZ11")
 ca_dictio <- create_dictionary(caname, ca, "CA")
@@ -282,7 +412,7 @@ saveRDS(scot_dictio, paste0(geo_lookup, 'Scotlandictionary.rds'))
 
 # Merge files together. 
 code_dictio <- rbind(scot_dictio, hb_dictio, ca_dictio, adp_dictio, part_dictio, 
-                     local_dictio, iz_dictio)
+                     pd_dictio, local_dictio, iz_dictio)
 saveRDS(code_dictio, paste0(geo_lookup, 'codedictionary.rds'))
 
 ###############################################.
@@ -302,11 +432,13 @@ data_depr_simd <- rbind(
               simd_version = "2012"), #simd version 2012
   create_simd("cadf715a-c365-4dcf-a6e0-acd7e3af21ec", year_list = 2014:2016, 
               simd_version = "2016"), #simd version 2016
-  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2023, 
-              simd_version = "2020v2") #simd version 2016
-)
+  create_simd("acade396-8430-4b34-895a-b3e757fa346e", year_list = 2017:2024, 
+              simd_version = "2020v2") #simd version 2020
+) %>%
+  merge(y=pd_lookup, by.x="ca", by.y="ca2019") %>%
+  select(-ends_with("name"))
 
-saveRDS(data_depr_simd, paste0(geo_lookup, 'deprivation_geography.rds'))
+saveRDS(data_depr_simd, paste0(geo_lookup, 'simd_datazone_lookup.rds'))
 
 ###############################################.
 ## Part 7 - Geography lookup for profiles tool ----
@@ -320,6 +452,7 @@ opt_lookup <- readRDS(paste0(geo_lookup, "codedictionary.rds")) %>%
                               substr(code, 1, 3) == "S11" ~ "Alcohol & drug partnership",
                               substr(code, 1, 3) == "S99" ~ "HSC locality",
                               substr(code, 1, 3) == "S37" ~ "HSC partnership",
+                              substr(code, 1, 3) == "S32" ~ "Police division",
                               substr(code, 1, 3) == "S02" ~ "Intermediate zone"),
          #Changing ands for & to reduce issues with long labels and " - " for "-"
          areaname = gsub(" and ", " & ", areaname),
@@ -421,6 +554,7 @@ opt_lookup %<>%
          areaname_full = gsub("Council area", "CA", areaname_full),
          areaname_full = gsub("Alcohol & drug partnership", "ADP", areaname_full),
          areaname_full = gsub("HSC partnership", "HSCP", areaname_full),
+         areaname_full = gsub("Police division", "PD", areaname_full),
          areaname_full = gsub("HSC locality", "HSCL", areaname_full),
          areaname_full = gsub("Intermediate zone", "IZ", areaname_full))
 

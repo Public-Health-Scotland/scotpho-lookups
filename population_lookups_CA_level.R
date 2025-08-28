@@ -88,7 +88,7 @@ library(dplyr)
 library(tidyr)
 
 ## filepaths ----
-cl_out <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #cl-out folderwith new 2022 estimates
+cl_out <- "/conf/linkage/output/lookups/Unicode/Populations/Estimates/" #cl-out folderwith new 2023 estimates
 scotpho_lookups_folder <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/" # scotpho folder where geography and population lookups are saved
 
 
@@ -98,11 +98,11 @@ scotpho_lookups_folder <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/" # scotpho f
 
 ## geography lookup 
 geo_lookup<- readRDS(paste0(scotpho_lookups_folder, "Geography/DataZone11_All_Geographies_Lookup.rds")) |>
-  select(ca2019, hscp2019, hb2019, adp) |>
+  select(ca2019, hscp2019, hb2019, adp, pd) |>
   unique()
 
 ## new council area population estimates
-CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2022.rds")) |>
+CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2023.rds")) |>
   filter(year >= 2002)
 
 
@@ -142,7 +142,7 @@ create_population_lookups <- function(lower_age, upper_age, basefile = CA_estima
   
   # step 4: pivot the data longer to create a geography code column
   CA_estimates <- CA_estimates |>
-    pivot_longer(cols = c(ca2019, hscp2019, hb2019, adp, Scotland),
+    pivot_longer(cols = c(ca2019, hscp2019, hb2019, adp, pd, Scotland),
                  names_to = "area_type",
                  values_to = "code")
   
@@ -212,6 +212,28 @@ create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
 create_population_lookups(lower_age = 0, upper_age = 17, name = "1to15")
 create_population_lookups(lower_age = 12, upper_age = 90, name = "12+")
 
+# other age ranges from the population_lookup script (any harm in generating these too? just means pops for CA and higher level geogs will be based on the actual year, not the previous year when SAPE are missing, right?)
+create_population_lookups(lower_age = 18, upper_age = 90, name = "18+")
+create_population_lookups(lower_age = 19, upper_age = 90, name = "19+")
+create_population_lookups(lower_age = 60, upper_age = 200, name = "60+")
+create_population_lookups(lower_age = 65, upper_age = 200, name = "65+")
+create_population_lookups(lower_age = 75, upper_age = 200, name = "75+")
+create_population_lookups(lower_age = 85, upper_age = 200, name = "85+")
+create_population_lookups(lower_age = 0, upper_age = 18, name = "under19")
+create_population_lookups(lower_age = 0, upper_age = 25, name = "under26")
+create_population_lookups(lower_age = 0, upper_age = 74, name = "under75")
+create_population_lookups(lower_age = 0, upper_age = 0, name = "under1")
+create_population_lookups(lower_age = 5, upper_age = 5, name = "5")
+create_population_lookups(lower_age = 11, upper_age = 11, name = "11")
+create_population_lookups(lower_age = 8, upper_age = 15, name = "8to15")
+create_population_lookups(lower_age = 16, upper_age = 39, name = "16to39")
+create_population_lookups(lower_age = 16, upper_age = 64, name = "16to64")
+create_population_lookups(lower_age = 40, upper_age = 64, name = "40to64")
+create_population_lookups(lower_age = 65, upper_age = 74, name = "65to74")
+create_population_lookups(lower_age = 1, upper_age = 4, name = "1to4")
+create_population_lookups(lower_age = 5, upper_age = 15, name = "5to15")
+create_population_lookups(lower_age = 16, upper_age = 25, name = "16to25")
+create_population_lookups(lower_age = 15, upper_age = 44, name = "15to44")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

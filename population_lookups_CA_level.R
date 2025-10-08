@@ -102,7 +102,7 @@ geo_lookup<- readRDS(paste0(scotpho_lookups_folder, "Geography/DataZone11_All_Ge
   unique()
 
 ## new council area population estimates
-CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2023.rds")) |>
+CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2024.rds")) |>
   filter(year >= 2002)
 
 
@@ -209,8 +209,9 @@ create_population_lookups(lower_age = 0, upper_age = 15, name = "under16")
 create_population_lookups(lower_age = 0, upper_age = 4, name = "under5")
 create_population_lookups(lower_age = 15, upper_age = 25, name = "15to25")
 create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
-create_population_lookups(lower_age = 0, upper_age = 17, name = "1to15")
+create_population_lookups(lower_age = 0, upper_age = 15, name = "1to15")
 create_population_lookups(lower_age = 12, upper_age = 90, name = "12+")
+
 
 # other age ranges from the population_lookup script (any harm in generating these too? just means pops for CA and higher level geogs will be based on the actual year, not the previous year when SAPE are missing, right?)
 create_population_lookups(lower_age = 18, upper_age = 90, name = "18+")
@@ -244,13 +245,12 @@ create_population_lookups(lower_age = 15, upper_age = 44, name = "15to44")
 # some historic changes between 2012 - 2021
 # everything pre 2012 an exact matc
 
-#check <- dq_check("CA_pop_allages_SR")
-#check <- dq_check("CA_pop_allages")
-#check <- dq_check("CA_pop_16+_SR")
-#check <- dq_check("CA_pop_16+")
-#check <- dq_check("CA_pop_16+")
-#check <- dq_check("CA_pop_11to25_SR")
-#check <- dq_check("CA_pop_11to25")
+# check <- dq_check("CA_pop_allages_SR")
+# check <- dq_check("CA_pop_allages")
+# check <- dq_check("CA_pop_16+_SR")
+# check <- dq_check("CA_pop_16+")
+# check <- dq_check("CA_pop_11to25_SR")
+# check <- dq_check("CA_pop_11to25")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 7. create backups of old files ---

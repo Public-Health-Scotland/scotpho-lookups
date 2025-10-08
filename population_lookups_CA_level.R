@@ -209,7 +209,7 @@ create_population_lookups(lower_age = 0, upper_age = 15, name = "under16")
 create_population_lookups(lower_age = 0, upper_age = 4, name = "under5")
 create_population_lookups(lower_age = 15, upper_age = 25, name = "15to25")
 create_population_lookups(lower_age = 0, upper_age = 17, name = "under18")
-create_population_lookups(lower_age = 0, upper_age = 15, name = "1to15")
+create_population_lookups(lower_age = 1, upper_age = 15, name = "1to15")
 create_population_lookups(lower_age = 12, upper_age = 90, name = "12+")
 
 

@@ -362,13 +362,14 @@ depr_pop_base <- rbind(
   # Council areas using national quintiles
   create_quintile_data(geo = "ca", quint = "sc_quin"),
   # Council areas using council quintiles
-  create_quintile_data(geo = "ca", quint = "ca_quin"),
+  create_quintile_data(geo = "ca", quint = "ca_quin")#,
   # HSCP using national quintiles
-  create_quintile_data(geo = "hscp", quint = "sc_quin"),
+ # create_quintile_data(geo = "hscp", quint = "sc_quin") , # not currently using
   # HSCP using HSCP quintiles
-  create_quintile_data(geo = "hscp", quint = "hscp_quin"),
+  #create_quintile_data(geo = "hscp", quint = "hscp_quin"), # not currently using 
   # PD quintiles
-  create_quintile_data(geo = "pd", quint = "sc_quin"))
+ # create_quintile_data(geo = "pd", quint = "sc_quin") # not currently using
+  )
 
 depr_totals <- depr_pop_base %>% group_by(year, sex_grp, age_grp, age, code, quint_type) %>% 
   summarise(denominator = sum(denominator, na.rm=T)) %>% ungroup() %>% 

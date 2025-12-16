@@ -462,7 +462,7 @@ saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 # received data requested from NRS 
 
 live_births <- readxl::read_excel(paste0("/PHI_conf/ScotPHO/Profiles/Data/Received Data/Live births/",
-                                         "Births 2002-2023 datazone_2011.xlsx")) %>%
+                                         "Births 2002-2024 datazone_2011.xlsx")) %>%
   janitor::clean_names() %>% 
   rename(datazone = datazone_2011, year = registration_year) %>% 
   group_by(year, datazone) %>% 

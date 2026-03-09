@@ -16,6 +16,7 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(readr)
 
 # Filepaths 
+# pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/Temporary"
 pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
@@ -132,7 +133,7 @@ create_quintile_data <- function(group_vars, geo, quint) {
   
   depr_pop_base %>% group_by_at(c("age_grp", "sex_grp", "age", "year", geo, quint)) %>% 
     summarise(denominator = sum(denominator, na.rm =T)) %>% 
-    rename_(code = geo, quintile = quint) %>% ungroup() %>% 
+    rename(code = geo, quintile = quint) %>% ungroup() %>% 
     mutate(quint_type = quint)
 }
 
@@ -173,14 +174,16 @@ dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-
   create_agegroups()  %>%
   rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
 
-##temporary fix for delayed SAPE 
-#recycle 2022 populations as if they were the new 2023 populations -
-dz11_base_2022 <- dz11_base |>
-  filter(year==2022) |> # filter for latest year
-  mutate(year=2023) # mutate latest year so that it will appear as 2023 
+# Code below was used when 2023 SAPE was significantly delayed, by recycling 2022 populations for 2023
+# to allow provisional indicator updates.No longer required as SAPE publications are currently up to date, 
+# but code can be un-commented and tweaked in future if required 
 
-dz11_base <-rbind(dz11_base,dz11_base_2022)
-rm(dz11_base_2022)
+# dz11_base_2022 <- dz11_base |>
+#   filter(year==2022) |> # filter for latest year
+#   mutate(year=2023) # mutate latest year so that it will appear as 2023 
+# 
+# dz11_base <-rbind(dz11_base,dz11_base_2022)
+# rm(dz11_base_2022)
  
 saveRDS(dz11_base, file=paste0(pop_lookup, "DZ11_pop_basefile.rds"))
 dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds"))
@@ -196,13 +199,14 @@ iz01_pop <- extract_open_data("0bb11b73-27ad-45ed-9a35-df688d69b12b", intzone)
 
 iz11_pop <- extract_open_data("93df4c88-f74b-4630-abd8-459a19b12f47", intzone) 
 
-#temporary fix for delayed SAPE 
-#recycle 2022 populations as if they were the new 2023 populations - this will need to be revised & reupdated once actual SAPE 2023 are released
-iz11_pop_2022  <- iz11_pop|>
-  filter(year==2022) |>
-  mutate(year=2023)
-iz11_pop <-rbind(iz11_pop,iz11_pop_2022)
-rm(iz11_pop_2022)
+# Code below was used when 2023 SAPE was significantly delayed, by recycling 2022 populations for 2023
+# to allow provisional indicator updates.No longer required as SAPE publications are currently up to date, 
+# but code can be un-commented and tweaked in future if required 
+# iz11_pop_2022  <- iz11_pop|>
+#   filter(year==2022) |>
+#   mutate(year=2023)
+# iz11_pop <-rbind(iz11_pop,iz11_pop_2022)
+# rm(iz11_pop_2022)
 
 ###############################################.
 #Scotland population
@@ -333,7 +337,7 @@ saveRDS(all_pop11, file=paste0(pop_lookup, "basefile_DZ11.rds"))
 ###############################################.
 ## Part 3 - Population by deprivation quintile basefile ----
 ###############################################.
-#This is better to be run in R server.
+
 dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds")) %>% 
   filter(year<2014) %>% # 2014 uses simd2016 based on dz2011
   rename(datazone = datazone2001)

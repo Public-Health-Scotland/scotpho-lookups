@@ -16,7 +16,7 @@ library(jsonlite)  # transforming JSON files into dataframes
 library(readr)
 
 # Filepaths 
-# pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/Temporary"
+#pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/Temporary/"
 pop_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Population/"
 geo_lookup <- "/PHI_conf/ScotPHO/Profiles/Data/Lookups/Geography/"
 
@@ -402,6 +402,7 @@ create_pop(dz = "DZ11", lower = 0, upper = 18, name = "pop_under19")
 create_pop(dz = "DZ11", lower = 0, upper = 15, name = "pop_under16")
 create_pop(dz = "DZ11", lower = 0, upper = 25, name = "pop_under26")
 create_pop(dz = "DZ11", lower = 0, upper = 74, name = "pop_under75")
+create_pop(dz = "DZ11", lower = 0, upper = 64, name = "pop_under65")
 create_pop(dz = "DZ11", lower = 0, upper = 0, name = "pop_under1")
 create_pop(dz = "DZ11", lower = 5, upper = 5, name = "pop_5")
 create_pop(dz = "DZ11", lower = 11, upper = 11, name = "pop_11")
@@ -418,6 +419,7 @@ create_pop(dz = "DZ11", lower = 5, upper = 15, name = "pop_5to15")
 create_pop(dz = "DZ11", lower = 16, upper = 25, name = "pop_16to25")
 create_pop(dz = "DZ11", lower = 15, upper = 25, name = "pop_15to25")
 create_pop(dz = "DZ11", lower = 15, upper = 44, name = "pop_15to44")
+create_pop(dz = "DZ11", lower = 15, upper = 44, name = "pop_15to74")
 
 ###############################################.
 # Working age population

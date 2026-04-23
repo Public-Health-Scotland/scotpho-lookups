@@ -494,12 +494,11 @@ saveRDS(live_births, file=paste0(pop_lookup, 'live_births.rds'))
 ###############################################.
 # Optional : new section of script that produces population data files that could be used to provide complete
 # breakdown of population age/sex structures for areas
-# Populations by age group, sex and year for all geographies
-# not sure if this should be wide or long format - not sure what impact the structure has on file size? Might decide to change once its clearer 
-# how output data will get used in the profiles tool.
+# Populations by age group, sex and year for all geographies (except ADP and police division)
+# Output file can be used to generate demographics visualisations such as population pyramids in profiles tool (under development April 2026)
 
 
-# use datazone sex/5 year age band as base to 
+# use datazone sex/5 year age band as basefile
 population_breakdown <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) |>
   subset(age >= 0 & age <= 200) |> #ensure selecting age reasonable range
   group_by(year,code,age_grp,sex_grp) |>
@@ -518,9 +517,10 @@ population_breakdown <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) |>
 #Could also consider reducing number of age bands - say 10 years?
 #or 10 year age bands for smaller geographies
 population_breakdown <-population_breakdown |>
-  filter(year %in% c(2024,2023,2022,2020,2015,2011,2005,2002))
+  filter(year %in% c(2024,2023,2022,2020,2015,2011,2002)) |>
+  filter(!(substr(code,1,3) %in% c("S11","S32"))) #exclude police divisions (s32) and ADP (s11)level geographies for this data
 
-saveRDS(population_breakdown, file=paste0(pop_lookup, 'testfile_population_breakdown_wide.rds'))
+saveRDS(population_breakdown, file=paste0(pop_lookup, 'population_age_sex_breakdown_wide.rds'))
 
 
 ##END

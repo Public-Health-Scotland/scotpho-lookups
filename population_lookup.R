@@ -490,4 +490,38 @@ live_births %<>% group_by(code, year) %>%
 
 saveRDS(live_births, file=paste0(pop_lookup, 'live_births.rds'))
 
+
+###############################################.
+# Optional : new section of script that produces population data files that could be used to provide complete
+# breakdown of population age/sex structures for areas
+# Populations by age group, sex and year for all geographies (except ADP and police division)
+# Output file can be used to generate demographics visualisations such as population pyramids in profiles tool (under development April 2026)
+
+
+# use datazone sex/5 year age band as basefile
+population_breakdown <- readRDS(file=paste0(pop_lookup, "basefile_DZ11.rds")) |>
+  subset(age >= 0 & age <= 200) |> #ensure selecting age reasonable range
+  group_by(year,code,age_grp,sex_grp) |>
+  summarise(population=sum(denominator))|>
+  ungroup() |>
+  group_by(code,year) |>
+  mutate(pop_sum=sum(population), #add total population for a particular geography code & year 
+         sex_grp=case_when(sex_grp=="1" ~ "Male",sex_grp=="2" ~"Female", TRUE ~"other")) |>
+  ungroup()|> #ungroup to allow % with male/female within geocode
+  mutate(percentage=population/pop_sum*100) |>
+  select(-pop_sum) |>
+  pivot_wider(names_from = sex_grp, values_from = c(percentage,population))|>
+  mutate(percentage_Male=0-percentage_Male) #convert male percentage to negative value which is required in population pyramid
+
+#reduce number of rows by restricting the years of data available
+#Could also consider reducing number of age bands - say 10 years?
+#or 10 year age bands for smaller geographies
+population_breakdown <-population_breakdown |>
+  filter(year %in% c(2024,2023,2022,2020,2015,2011,2002)) |>
+  filter(!(substr(code,1,3) %in% c("S11","S32"))) #exclude police divisions (s32) and ADP (s11)level geographies for this data
+
+saveRDS(population_breakdown, file=paste0(pop_lookup, 'population_age_sex_breakdown_wide.rds'))
+
+
 ##END
+

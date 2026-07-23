@@ -102,7 +102,7 @@ geo_lookup<- readRDS(paste0(scotpho_lookups_folder, "Geography/DataZone11_All_Ge
   unique()
 
 ## new council area population estimates
-CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2024.rds")) |>
+CA_estimates_raw<- readRDS(paste0(cl_out, "CA2019_pop_est_1981_2025.rds")) |>
   filter(year >= 2002)
 
 

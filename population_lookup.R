@@ -465,6 +465,15 @@ teenpreg_pop_depr <- readRDS(file=paste0(pop_lookup, "basefile_deprivation.rds")
 saveRDS(teenpreg_pop_depr, file=paste0(pop_lookup, 'depr_pop_fem15to19.rds'))
 
 ###############################################.
+#Long-acting reversible contraceptives
+larc_pop <- readRDS(file.path(pop_lookup, "basefile_DZ11.rds")) |> 
+  subset(age >= 15 & age < 50 & sex_grp == 2) |> #selecting age and sex of interest
+  group_by(year, code) |>  summarise(denominator = sum(denominator), .groups = "drop") |> 
+  filter(substr(code, 1, 3) %in% c("S08", "S00"))
+
+saveRDS(larc_pop, file.path(pop_lookup, 'CA_pop_fem15to49.rds'))
+
+###############################################.
 # Live births (used for infant deaths under 1)
 # received data requested from NRS 
 

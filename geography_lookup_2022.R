@@ -347,37 +347,7 @@ saveRDS(pd_lookup, paste0(geo_lookup, 'PD_CA_lookup.rds'))
 
 
 ###############################################.
-## Part 3a) (2011 dz) - Joining all geographies ----
-###############################################.
-# reading datazone lookup  from open data platform 
-# which includes most geographies but adp and locality
-# Resource ids can be accessed in the page for the datazone 2011 lookup here:
-# https://www.opendata.nhs.scot/dataset/geography-codes-and-labels
-#dz_base <- extract_data("395476ab-0720-4740-be07-ff4467141352")
-
-# Creating dz lookup
-# dz11_lookup <- dz_base %>% 
-#   select(datazone, intzone, ca, hscp, hb) %>% 
-#   # the variables contain a year, but they have the latest(2019) codes
-#   rename(datazone2011 = datazone, intzone2011 =intzone, ca2019 = ca,
-#          hscp2019 = hscp, hb2019 = hb)
-# 
-# # merging localities
-# dz11_lookup <- left_join(dz11_lookup, hscp_loc, by = "datazone2011") 
-# 
-# # merging adps
-# dz11_lookup <- left_join(dz11_lookup, adp_lookup, by = "ca2019") %>% 
-#   select(-loc_name, -hscp2019name, -adp_name)
-# 
-# # merging PDs
-# dz11_lookup <- left_join(dz11_lookup, pd_lookup, by = "ca2019") %>% 
-#   select(-pd_name)
-# 
-# saveRDS(dz11_lookup, paste0(geo_lookup, 'DataZone11_All_Geographies_Lookup.rds'))
-
-
-###############################################.
-## Part 3b) (2022 dz) - Joining all geographies ----
+## Part 3 (2022 dz) - Joining all geographies ----
 ###############################################.
 
 # open data table not updated yet

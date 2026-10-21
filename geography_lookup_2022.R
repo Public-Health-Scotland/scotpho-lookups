@@ -484,7 +484,6 @@ opt_lookup <- readRDS(paste0(geo_lookup, "codedictionary_dz22.rds")) %>%
 #   gather(geotype, code, c(intzone2022, hscp_locality)) %>% distinct() %>%
 #   select(-geotype) %>% rename(parent_code = hscp_partnership)
 
-
 geo_parents <- readRDS(paste0(geo_lookup, "IZtoPartnership_parent_lookup_dz22.rds")) %>%
   gather(geotype, code, c(intzone2022)) %>% distinct() %>%
   select(-geotype) %>% rename(parent_code = hscp_partnership)
@@ -500,9 +499,10 @@ opt_lookup <- left_join(x=opt_lookup, y=geo_parents, by="code") # previous e, al
 write.csv(opt_lookup, paste0(geo_lookup,"iz22 names and code.csv"), row.names = FALSE)
 
 
-## No IZ should assigned to more than one hscp partnership in this file - check by filtering the geo type to IZ and the total should be 1279
+## No IZ should assigned to more than one hscp partnership in this csv file - check by filtering the geo type to 2022 IZ and the total should be 1334 
+## This is a manual step requireing you to open the csv created above, filter for the IZs, look for any where the names are the same for different IZ codes. 
 
-###There are a number of IZ's with the same name which could be confusing, recoding to avoid this issue.
+## There are a number of IZ's with the same name which could be confusing, recoding to avoid this issue - add the HSCP to which they belong)
 opt_lookup %<>%
   mutate(areaname = case_when(
     code == "S02003239" ~ "Woodside-Glasgow City",
@@ -525,12 +525,7 @@ opt_lookup %<>%
     code == "S02003232" ~ "City Centre West-Glasgow City",
     TRUE  ~  paste(areaname))) #Last line for the rest of cases
  
-    # NOT DUPLICATES IN 2022 DATAZONE (BUT WERE IN 2011)
-  # code == "S02002490" ~ "Ladywell-West Lothian",
-  # code == "S02002156" ~ "Ladywell-North Lanarkshire",
-  # code == "S02001307" ~ "Blackburn-Aberdeenshire",
-  # code == "S02002496" ~ "Blackburn-West Lothian",
-  
+ 
   # THINK THAT FOR INTERMEDIATE ZONES IN 2011 ORIGINALLY THESE AREAS WERE GIVEN NUMBERS NOT NAMES
   # AT SOME POINT SOMEONE DECIDED NUMERIC NAMES WEREN'T HELPFUL SO THEY CREATED NAMES BUT TO EASE
   # MATCHING THE NUMBERS WERE PART OF THE NAME
@@ -596,6 +591,9 @@ opt_lookup %<>%
 saveRDS(opt_lookup, paste0(geo_lookup, "opt_geo_lookup_DZ22.rds"))
 
 
-check <- readRDS(paste0(geo_lookup, "opt_geo_lookup_26082024.rds"))
+#check <- readRDS(paste0(geo_lookup, "opt_geo_lookup_26082024.rds"))
+
+check <- readRDS(paste0(geo_lookup, "opt_geo_lookup_DZ22.rds"))
+
 
 ##END

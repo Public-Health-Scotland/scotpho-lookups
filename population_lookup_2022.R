@@ -41,7 +41,7 @@ create_agegroups <- function(df) {
 
 ###############################################.
 # This function extract the data for each geographical level from the NHS data platform
-# and then formats it in the way is neeeded. It uses two parameters, one for the 
+# and then formats it in the way is needed. It uses two parameters, one for the 
 # resource-id used in the plaform and one for the name of the geography variable for that data
 extract_open_data <- function(resource_id, geography) {
   
@@ -149,12 +149,12 @@ create_quintile_data <- function(group_vars, geo, quint) {
 # Datazone 2001.
 # Resource ids can be accessed in the page for the datazone 2001 pop here:
 # https://www.opendata.nhs.scot/dataset/population-estimates
-dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", datazone) %>% 
-  create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
-
-saveRDS(dz01_base, file=paste0(pop_lookup, "DZ01_pop_basefile.rds"))
-
-rm(dz01_base) #freeing up memory
+#dz01_base <- extract_open_data("bf086aee-130d-4487-b854-808db0e29dc4", datazone) %>% 
+#   create_agegroups()  %>% rename(denominator = pop, datazone2001 =code)
+# 
+# saveRDS(dz01_base, file=paste0(pop_lookup, "DZ01_pop_basefile.rds"))
+# 
+# rm(dz01_base) #freeing up memory
 # dz01_base <- readRDS(paste0(pop_lookup, "DZ01_pop_basefile.rds"))
 
 ###############################################.
@@ -181,13 +181,13 @@ dz11_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-
 
 dz22_base <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/35d69dbe-0657-47fe-9a68-d6ffd63a50a9/download/dz2022-pop-est_01092026.csv") %>%
   setNames(tolower(names(.))) %>%   #variables to lower case
-  filter(year > 2001 & substr(datazone, 1, 3) != "S92" & sex != "All") %>% #years and no Scotland
+  filter(year > 2011 & substr(datazone, 1, 3) != "S92" & sex != "All") %>% #years and no Scotland
   mutate(sex = recode(sex, "Male" = 1, "Female" = 2, "f" = 2, "m" = 1)) %>%
   select(year, sex, datazone, age0:age90plus) %>%
   gather(age, pop, -c(year, sex, datazone)) %>% #wide to long format
   mutate(age = as.numeric(gsub("age|plus", "", age))) %>% #recoding age variable
   create_agegroups()  %>%
-  rename(sex_grp = sex, denominator = pop, datazone2011 = datazone)
+  rename(sex_grp = sex, denominator = pop, datazone2022 = datazone)
 
 
 
@@ -352,6 +352,15 @@ all_pop11 <- rbind(iz11_pop, ca_pop, adp_pop, pd_pop, hb_pop, hscp_pop, scot_pop
 
 saveRDS(all_pop11, file=paste0(pop_lookup, "basefile_DZ11.rds"))
 
+all_pop22 <- rbind(iz22_pop, ca_pop, adp_pop, pd_pop, hb_pop, hscp_pop, scot_pop) %>%
+                   #, local_pop) %>% # CAN'T ADD LOCALITIES UNTIL WE HAVE DZ22 TO HSCP LOCALITY LOOKUP 
+  rename(denominator=pop) %>% create_agegroups() %>%  #recoding age
+  mutate(year = as.numeric(year))
+
+saveRDS(all_pop22, file=paste0(pop_lookup, "basefile_DZ22.rds"))
+
+
+
 ###############################################.
 ## Part 3 - Population by deprivation quintile basefile ----
 ###############################################.
@@ -365,16 +374,13 @@ dz11_base <- readRDS(paste0(pop_lookup, "DZ11_pop_basefile.rds")) %>%
   subset(year>2013 & year < 2024) %>% # datazone 2011 boundaries used for simd trend analysis from 2014 to 2023
   rename(datazone = datazone2011)
 
-dz11_base <- readRDS(paste0(pop_lookup, "DZ22_pop_basefile.rds")) %>% 
+dz22_base <- readRDS(paste0(pop_lookup, "DZ22_pop_basefile.rds")) %>% 
   subset(year>2023) %>% # datazone 2022 boundaries used for simd trend analysis from 2024 onwards
-  rename(datazone = datazone2011)
+  rename(datazone = datazone2022)
 
 
-
-
-
-depr_pop_base <- rbind(dz01_base, dz11_base)
-rm(dz01_base, dz11_base)
+depr_pop_base <- rbind(dz01_base, dz11_base, dz22_base)
+rm(dz01_base, dz11_base, dz22_base)
 
 depr_lookup <- readRDS(paste0(geo_lookup, 'simd_datazone_lookup.rds')) %>% 
   mutate(scotland="S00000001")
@@ -415,6 +421,10 @@ rm(depr_pop_base)
 ###############################################.
 # DZ11, LA and deprivation
 create_pop(dz = "DZ11", lower = 0, upper = 200, name = "pop_allages")
+
+create_pop(dz = "DZ22", lower = 0, upper = 200, name = "pop_allages")
+
+
 create_pop(dz = "DZ11", lower = 60, upper = 200, name = "pop_60+")
 create_pop(dz = "DZ11", lower = 16, upper = 200, name = "pop_16+")
 create_pop(dz = "DZ11", lower = 18, upper = 200, name = "pop_18+")
